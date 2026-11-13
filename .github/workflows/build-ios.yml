@@ -37,7 +37,7 @@ jobs:
         run: ./gradlew :app:compileDebugKotlin --no-daemon
 
       - name: Build KMP Shared Framework for iOS Simulator
-        run: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64 --no-daemon
+        run: ./gradlew :shared:compileKotlinIosSimulatorArm64 --no-daemon
 
       - name: Build iOS Simulator App with Xcode
         run: |
