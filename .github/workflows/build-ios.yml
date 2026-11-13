@@ -50,6 +50,35 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             build
 
+      - name: Inspect & Verify iOS App Bundle Contents
+        run: |
+          APP_PATH="build/ios/DerivedData/Build/Products/Debug-iphonesimulator/iosApp.app"
+          
+          echo "======================================================="
+          echo " 1. TOTAL DIRECTORY SIZE"
+          echo "======================================================="
+          du -sh "$APP_PATH"
+          du -k "$APP_PATH"
+          
+          echo ""
+          echo "======================================================="
+          echo " 2. FILE & FOLDER LISTING INSIDE BUNDLE"
+          echo "======================================================="
+          ls -laR "$APP_PATH"
+          
+          echo ""
+          echo "======================================================="
+          echo " 3. BINARY COMPILATION & ARCHITECTURE VERIFICATION"
+          echo "======================================================="
+          file "$APP_PATH/iosApp"
+          otool -L "$APP_PATH/iosApp"
+          
+          echo ""
+          echo "======================================================="
+          echo " 4. INFO.PLIST STRUCTURE"
+          echo "======================================================="
+          plutil -p "$APP_PATH/Info.plist"
+
       - name: Stage & Zip Complete iOS .app Bundle
         run: |
           mkdir -p build/ios/export
