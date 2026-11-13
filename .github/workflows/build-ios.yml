@@ -1,0 +1,63 @@
+name: Build iOS Application (Simulator)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    name: Build iOS Simulator App on Cloud macOS
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17 JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Gradle Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Grant Execute Permission for Gradlew
+        run: chmod +x gradlew
+
+      - name: Verify Android Kotlin Build
+        run: ./gradlew :app:compileDebugKotlin --no-daemon
+
+      - name: Build iOS Simulator App with Xcode
+        run: |
+          mkdir -p build/ios
+          xcodebuild \
+            -project iosApp/iosApp.xcodeproj \
+            -scheme iosApp \
+            -sdk iphonesimulator \
+            -configuration Debug \
+            -derivedDataPath build/ios/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Zip iOS Simulator App Bundle
+        run: |
+          cd build/ios/DerivedData/Build/Products/Debug-iphonesimulator
+          zip -r MultiAI_iOS_Simulator.app.zip iosApp.app
+
+      - name: Upload iOS Simulator App Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MultiAI-iOS-Simulator-App
+          path: build/ios/DerivedData/Build/Products/Debug-iphonesimulator/MultiAI_iOS_Simulator.app.zip
+          retention-days: 14
