@@ -82,16 +82,14 @@ jobs:
           echo "======================================================="
           plutil -p "$APP_PATH/Info.plist"
 
-      - name: Stage & Zip Complete iOS .app Bundle
+      - name: Stage Complete iOS .app Directory Container
         run: |
-          mkdir -p build/ios/export
-          cp -R build/ios/DerivedData/Build/Products/Debug-iphonesimulator/iosApp.app build/ios/export/MultiAI.app
-          cd build/ios/export
-          zip -r MultiAI_iOS_Simulator.zip MultiAI.app
+          mkdir -p build/ios/export/MultiAI_Bundle
+          cp -R build/ios/DerivedData/Build/Products/Debug-iphonesimulator/iosApp.app build/ios/export/MultiAI_Bundle/MultiAI.app
 
       - name: Upload iOS Simulator App Bundle Artifact
         uses: actions/upload-artifact@v4
         with:
           name: MultiAI-iOS-Simulator-App
-          path: build/ios/export/MultiAI_iOS_Simulator.zip
+          path: build/ios/export/MultiAI_Bundle/MultiAI.app
           retention-days: 14
