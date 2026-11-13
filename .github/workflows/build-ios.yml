@@ -37,7 +37,7 @@ jobs:
         run: ./gradlew :app:compileDebugKotlin --no-daemon
 
       - name: Build KMP Shared Framework for iOS Simulator
-        run: ./gradlew :shared:compileKotlinIosSimulatorArm64 --no-daemon
+        run: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64 --no-daemon
 
       - name: Build iOS Simulator App with Xcode
         run: |
@@ -82,14 +82,42 @@ jobs:
           echo "======================================================="
           plutil -p "$APP_PATH/Info.plist"
 
-      - name: Stage Complete iOS .app Directory Container
+      - name: Stage & Package Complete iOS .app Bundle
         run: |
           mkdir -p build/ios/export/MultiAI_Bundle
           cp -R build/ios/DerivedData/Build/Products/Debug-iphonesimulator/iosApp.app build/ios/export/MultiAI_Bundle/MultiAI.app
+          
+          echo "======================================================="
+          echo " STAGING VERIFICATION"
+          echo "======================================================="
+          ls -laR build/ios/export/MultiAI_Bundle/MultiAI.app
+          
+          echo "======================================================="
+          echo " PACKAGING MultiAI.app DIRECTORY INTO ZIP"
+          echo "======================================================="
+          cd build/ios/export/MultiAI_Bundle
+          zip -r ../MultiAI_iOS_Simulator.zip MultiAI.app
+          cd ../../../..
 
-      - name: Upload iOS Simulator App Bundle Artifact
+      - name: Inspect & Validate ZIP Entry Hierarchy (Strict Fail Guard)
+        run: |
+          echo "======================================================="
+          echo " UNZIP CONTENTS LISTING (unzip -l)"
+          echo "======================================================="
+          unzip -l build/ios/export/MultiAI_iOS_Simulator.zip
+          
+          echo "======================================================="
+          echo " VERIFYING DIRECTORY ROOT ENTRY MultiAI.app/"
+          echo "======================================================="
+          if ! unzip -l build/ios/export/MultiAI_iOS_Simulator.zip | grep -q "MultiAI.app/"; then
+            echo "❌ ERROR: ZIP archive does NOT contain top-level MultiAI.app/ directory root!"
+            exit 1
+          fi
+          echo "✅ VERIFICATION SUCCESSFUL: ZIP archive strictly contains MultiAI.app/ directory root!"
+
+      - name: Upload iOS Simulator App ZIP Artifact
         uses: actions/upload-artifact@v4
         with:
           name: MultiAI-iOS-Simulator-App
-          path: build/ios/export/MultiAI_Bundle/MultiAI.app
+          path: build/ios/export/MultiAI_iOS_Simulator.zip
           retention-days: 14

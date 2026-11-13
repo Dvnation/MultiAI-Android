@@ -1,4 +1,5 @@
 import SwiftUI
+import Shared
 
 struct ChatMessage: Identifiable {
     let id = UUID()
@@ -35,7 +36,7 @@ struct ContentView: View {
 
                     Spacer()
 
-                    Text("KMP Connected ⚡")
+                    Text("KMP Shared ⚡")
                         .font(.system(size: 11, weight: .semibold))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
@@ -139,11 +140,23 @@ struct ContentView: View {
         inputPrompt = ""
         isLoading = true
 
-        // Async AI response
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            let replyText = "\(activePlatformName) AI response to: \"\(trimmed)\""
-            messages.append(ChatMessage(text: replyText, isFromAI: true))
-            isLoading = false
+        Task {
+            let aiReply: String
+            switch selectedTab {
+            case 0:
+                aiReply = try await AiService.shared.fetchGeminiAiResponse(prompt: trimmed)
+            case 1:
+                aiReply = try await AiService.shared.fetchHuggingFaceAiResponse(prompt: trimmed)
+            case 2:
+                aiReply = try await AiService.shared.fetchGrokAiResponse(prompt: trimmed)
+            default:
+                aiReply = try await AiService.shared.fetchGeminiAiResponse(prompt: trimmed)
+            }
+
+            DispatchQueue.main.async {
+                messages.append(ChatMessage(text: aiReply, isFromAI: true))
+                isLoading = false
+            }
         }
     }
 }
