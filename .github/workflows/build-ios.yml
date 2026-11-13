@@ -50,14 +50,16 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             build
 
-      - name: Zip iOS Simulator App Bundle
+      - name: Stage & Zip Complete iOS .app Bundle
         run: |
-          cd build/ios/DerivedData/Build/Products/Debug-iphonesimulator
-          zip -r MultiAI_iOS_Simulator.app.zip iosApp.app
+          mkdir -p build/ios/export
+          cp -R build/ios/DerivedData/Build/Products/Debug-iphonesimulator/iosApp.app build/ios/export/MultiAI.app
+          cd build/ios/export
+          zip -r MultiAI_iOS_Simulator.zip MultiAI.app
 
-      - name: Upload iOS Simulator App Artifact
+      - name: Upload iOS Simulator App Bundle Artifact
         uses: actions/upload-artifact@v4
         with:
           name: MultiAI-iOS-Simulator-App
-          path: build/ios/DerivedData/Build/Products/Debug-iphonesimulator/MultiAI_iOS_Simulator.app.zip
+          path: build/ios/export/MultiAI_iOS_Simulator.zip
           retention-days: 14
