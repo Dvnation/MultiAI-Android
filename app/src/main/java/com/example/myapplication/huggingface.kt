@@ -31,9 +31,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
+import com.example.myapplication.ui.theme.MyApplicationTheme
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -291,5 +294,14 @@ fun HuggingFaceNav(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun HuggingFaceNavPreview() {
+    MyApplicationTheme {
+        val navController = rememberNavController()
+        HuggingFaceNav(navController = navController)
     }
 }
