@@ -1,152 +1,222 @@
 package com.example.myapplication
 
 import android.content.Context
-import androidx.compose.foundation.layout.*
+import android.util.Log
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
-fun getLatestAiResponses(context: Context): Map<String, String> {
-    val platforms = listOf("Gemini", "Hugging Face", "Grok")
-    val map = mutableMapOf<String, String>()
-    for (platform in platforms) {
-        val messages = getActiveChat(context, platform)
-        var lastAiMessage = messages.lastOrNull { it.isFromAI }?.content
-            ?: messages.lastOrNull { !it.isFromAI }?.content
-            ?: "No recent response recorded for $platform."
+fun getLatestAiResponses(
+    sourceMessages: Map<String, List<MessageData>>
+): Map<String, String> {
 
-        // Smart payload length management to prevent HTTP 413 Payload Too Large for Judge AI
-        if (lastAiMessage.length > 1500) {
-            lastAiMessage = lastAiMessage.take(1500) + "...\n[Response summary truncated for evaluation]"
+    val platforms = listOf("Gemini", "Hugging Face", "Grok")
+    val result = mutableMapOf<String, String>()
+
+    for (platform in platforms) {
+        val messages = sourceMessages[platform] ?: emptyList()
+
+        // Find the latest question sent to this AI
+        val lastUserIndex = messages.indexOfLast { !it.isFromAI }
+
+        // Only accept an AI response that came after that question
+        val latestResponse = messages
+            .drop(lastUserIndex + 1)
+            .lastOrNull {
+                it.isFromAI &&
+                        it.content.isNotBlank() &&
+                        !it.content.trim().startsWith("ERROR:", ignoreCase = true)
+            }
+            ?.content
+            ?.trim()
+
+        val response = if (latestResponse.isNullOrBlank()) {
+            "No valid response received from $platform for the latest search."
+        } else {
+            latestResponse
         }
-        map[platform] = lastAiMessage
+
+        result[platform] = if (response.length > 4000) {
+            response.take(4000) + "\n[Response shortened for evaluation]"
+        } else {
+            response
+        }
     }
-    return map
+
+    return result
 }
 
-suspend fun getCloudflareJudgeResponse(history: List<MessageData>): String {
-    return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-        try {
-            val apiMessages = mutableListOf<JsonObject>()
+suspend fun getCloudflareJudgeResponse(
+    history: List<MessageData>
+): String = withContext(Dispatchers.IO) {
+
+    try {
+        val apiMessages = mutableListOf<JsonObject>()
+
+        apiMessages.add(
+            JsonObject(
+                mapOf(
+                    "role" to JsonPrimitive("system"),
+                    "content" to JsonPrimitive(
+                        """
+                        You are Judge AI, an independent expert evaluator.
+
+                        Your responsibility is to evaluate responses from:
+                        1. Gemini
+                        2. Hugging Face
+                        3. Grok
+
+                        IMPORTANT RULES:
+
+                        - Evaluate the actual responses supplied to you.
+                        - Never invent a response for a missing AI platform.
+                        - Never mistake the user's question for an AI response.
+                        - Identify which platform provides the strongest answer.
+                        - Check factual accuracy, relevance, completeness and clarity.
+                        - Identify agreements and disagreements.
+                        - Point out incorrect or unsupported claims.
+                        - Do not automatically favour any platform.
+                        - If a response is missing, clearly state that it is missing.
+                        - Provide a useful, detailed and well-organized conclusion.
+
+                        Follow the requested operation: Compare, Contrast,
+                        Tabulate or Merge.
+
+                        Be objective, analytical and precise.
+                        """.trimIndent()
+                    )
+                )
+            )
+        )
+
+        val trimmedHistory = history
+            .filter { it.content.isNotBlank() }
+            .takeLast(6)
+
+        trimmedHistory.forEach { message ->
+
+            val role = if (message.isFromAI) "assistant" else "user"
+
+            val content = message.content
+                .trim()
+                .take(5000)
 
             apiMessages.add(
                 JsonObject(
                     mapOf(
-                        "role" to JsonPrimitive("system"),
-                        "content" to JsonPrimitive(
-                            """
-                            You are Cloudflare Judge AI, an expert analytical AI evaluator powered by Cloudflare Workers AI.
-                            Your role is to compare, contrast, or merge responses provided from Gemini, Hugging Face, and Grok.
-                            Provide clear, unbiased, well-structured responses with good spacing and formatting.
-                            Avoid unnecessary hashtags or markdown noise.
-                            """.trimIndent()
-                        )
+                        "role" to JsonPrimitive(role),
+                        "content" to JsonPrimitive(content)
                     )
                 )
             )
-
-            // Smart history size management to prevent HTTP 413 Payload Too Large
-            val trimmedHistory = if (history.size > 5) history.takeLast(5) else history
-            val hiddenPrompt = "\n\n(Note: Please make the response very smooth, detailed, clear, and well-formatted.)"
-            val lastUserIndex = trimmedHistory.indexOfLast { !it.isFromAI }
-
-            trimmedHistory.forEachIndexed { index, message ->
-                if (message.content.isNotBlank()) {
-                    val role = if (message.isFromAI) "assistant" else "user"
-                    var content = message.content.trim()
-
-                    if (content.length > 2000 && index != lastUserIndex) {
-                        content = content.take(2000) + "...\n[Context truncated to prevent 413 error]"
-                    }
-
-                    if (index == lastUserIndex) {
-                        content += hiddenPrompt
-                    }
-                    apiMessages.add(
-                        JsonObject(
-                            mapOf(
-                                "role" to JsonPrimitive(role),
-                                "content" to JsonPrimitive(content)
-                            )
-                        )
-                    )
-                }
-            }
-
-            val accountId = "c5950e189d2d0c1e8d6411f75e110ebf"
-            val targetUrl = "https://api.cloudflare.com/client/v4/accounts/$accountId/ai/run/@cf/meta/llama-3.1-8b-instruct"
-            val cfToken = "vXf6sZ9k0_mU2qW5eP8jL1nB4vC7xY3aZ0qW8eR2"
-
-            val payload = JsonObject(
-                mapOf(
-                    "messages" to JsonArray(apiMessages),
-                    "max_tokens" to JsonPrimitive(2048)
-                )
-            )
-
-            val rawOkHttpClient = okhttp3.OkHttpClient()
-            val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
-            val requestBody = payload.toString().toRequestBody(mediaType)
-
-            val request = okhttp3.Request.Builder()
-                .url(targetUrl)
-                .addHeader("Authorization", "Bearer $cfToken")
-                .addHeader("Content-Type", "application/json")
-                .post(requestBody)
-                .build()
-
-            rawOkHttpClient.newCall(request).execute().use { response ->
-                val responseText = response.body?.string() ?: ""
-
-                if (response.isSuccessful) {
-                    try {
-                        val jsonElement = Json.parseToJsonElement(responseText)
-                        val resultObj = jsonElement.jsonObject["result"]?.jsonObject
-                        val answer = resultObj?.get("response")?.jsonPrimitive?.content
-                            ?: jsonElement.jsonObject["choices"]?.jsonArray?.firstOrNull()?.jsonObject?.get("message")?.jsonObject?.get("content")?.jsonPrimitive?.content
-
-                        if (!answer.isNullOrBlank()) {
-                            cleanResponseText(answer)
-                        } else {
-                            "Cloudflare AI returned an empty response."
-                        }
-                    } catch (e: Exception) {
-                        "Cloudflare AI Parsing Error: ${e.localizedMessage}"
-                    }
-                } else {
-                    getGrokResponse(history)
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            try {
-                getGrokResponse(history)
-            } catch (ex: Exception) {
-                "Cloudflare AI Error: ${e.localizedMessage}"
-            }
         }
+
+
+        val accountId = "2dd9cbbd4d8844579f4fdd1a2d067d28"
+        val cfToken = ""
+        val targetUrl =
+            "https://api.cloudflare.com/client/v4/accounts/$accountId/ai/run/@cf/meta/llama-3.1-8b-instruct"
+
+        val payload = JsonObject(
+            mapOf(
+                "messages" to JsonArray(apiMessages),
+                "max_tokens" to JsonPrimitive(2048)
+            )
+        )
+
+        val client = OkHttpClient.Builder()
+            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(90, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+
+        val requestBody = payload.toString()
+            .toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
+
+        val request = Request.Builder()
+            .url(targetUrl)
+            .addHeader("Authorization", "Bearer $cfToken")
+            .addHeader("Content-Type", "application/json")
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).execute().use { response ->
+
+            val responseText = response.body?.string().orEmpty()
+
+            if (!response.isSuccessful) {
+                throw IllegalStateException(
+                    "Cloudflare Judge AI error ${response.code}: $responseText"
+                )
+            }
+
+            val json = Json.parseToJsonElement(responseText).jsonObject
+
+            val answer = json["result"]
+                ?.jsonObject
+                ?.get("response")
+                ?.jsonPrimitive
+                ?.content
+
+            if (answer.isNullOrBlank()) {
+                throw IllegalStateException(
+                    "Judge AI returned an empty response."
+                )
+            }
+
+            cleanResponseText(answer)
+        }
+
+    } catch (e: Exception) {
+
+        Log.e("JudgeAI", "Judge evaluation failed", e)
+
+        throw IllegalStateException(
+            "Judge AI could not complete the evaluation: ${e.localizedMessage}",
+            e
+        )
     }
 }
-
 @Composable
 fun JudgeAiNav(
     navController: NavController,
@@ -155,51 +225,85 @@ fun JudgeAiNav(
     isGlobalSearch: Boolean = false,
     onOpenSettings: () -> Unit = {},
     onGlobalSubmit: (String) -> Unit = {},
-    externalMessages: androidx.compose.runtime.snapshots.SnapshotStateList<MessageData>? = null
+    sourceMessages: Map<String, List<MessageData>> = emptyMap(),
+    externalMessages: SnapshotStateList<MessageData>? = null
 ) {
     val judgeColor = Color(0xFF8B5CF6)
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color.LightGray
+        color = Color(0xFFF5F7F9)
     ) {
         if (!isGlobalSearch) {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(20.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = null,
-                    tint = judgeColor,
-                    modifier = Modifier.size(64.dp)
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "JUDGE AI IS DISABLED",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = judgeColor
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "To compare, contrast, and merge responses across AI models, please enable 'Same Search Across AI Platforms' in Settings.",
-                    fontSize = 14.sp,
-                    color = Color.DarkGray,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(
-                    onClick = onOpenSettings,
-                    colors = ButtonDefaults.buttonColors(containerColor = judgeColor),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(26.dp),
+                    color = Color.White,
+                    shadowElevation = 3.dp
                 ) {
-                    Text("Go to Settings", fontWeight = FontWeight.Bold, color = Color.White)
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFF3E8FF)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = null,
+                                tint = judgeColor,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = Color(0xFFF3E8FF)
+                        ) {
+                            Text(
+                                text = "ARENA MODE REQUIRED",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = judgeColor,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "JUDGE AI IS PAUSED",
+                            fontSize = 21.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFF111827)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Turn on MultiSearch ⚡ in Settings to compare, contrast, merge, and tabulate AI answers side-by-side.",
+                            fontSize = 13.sp,
+                            color = Color(0xFF6B7280),
+                            textAlign = TextAlign.Center,
+                            lineHeight = 19.sp
+                        )
+                        Spacer(modifier = Modifier.height(22.dp))
+                        Button(
+                            onClick = onOpenSettings,
+                            colors = ButtonDefaults.buttonColors(containerColor = judgeColor),
+                            shape = RoundedCornerShape(18.dp),
+                            modifier = Modifier.fillMaxWidth().height(52.dp)
+                        ) {
+                            Text("Enable in Settings ⚡", fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                    }
                 }
             }
         } else {
@@ -210,6 +314,7 @@ fun JudgeAiNav(
                 onSearchWordChange = onSearchWordChange,
                 isGlobalSearch = isGlobalSearch,
                 onGlobalSubmit = onGlobalSubmit,
+                judgeSourceMessages = sourceMessages,
                 externalMessages = externalMessages
             )
         }

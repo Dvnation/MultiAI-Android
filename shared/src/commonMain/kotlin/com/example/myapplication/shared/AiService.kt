@@ -10,8 +10,8 @@ object AiService {
     suspend fun fetchGeminiAiResponse(prompt: String): String {
         return try {
             val systemPrompt = "You are Gemini, an intelligent, helpful AI assistant. Provide clear, detailed, well-formatted answers."
-            val apiKey = "AQ.Ab8RN6LBo4isIYAY4Pg8hzR2ZZ1KRr8rCssYLxR1tzMX3JqyqA"
-            val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=$apiKey"
+            val apiKey = ""
+            val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey"
 
             val payload = JsonObject(
                 mapOf(

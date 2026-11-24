@@ -1,4 +1,4 @@
-
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
@@ -20,18 +20,18 @@
             android:value="ca-app-pub-3940256099942544~3347511713" />
 
         <activity
-            android:name=".Practice2"
+            android:name=".MultiAI"
             android:exported="true"
             android:label="MultiAI"
             android:theme="@style/Theme.MyApplication"
             android:windowSoftInputMode="adjustResize">
-
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
         </activity>
+
+
 
         <activity
             android:name=".GeminiActivity"

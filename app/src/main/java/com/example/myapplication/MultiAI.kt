@@ -1,62 +1,70 @@
 package com.example.myapplication
 
+import android.app.Activity
+import android.content.Context
 import android.os.Bundle
-import io.ktor.client.plugins.HttpTimeout
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.Login
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.VolunteerActivism
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.myapplication.ui.theme.MyApplicationTheme
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import androidx.navigation.compose.rememberNavController
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Login
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.CloudUpload
-import androidx.compose.material.icons.filled.Lightbulb
-import androidx.compose.material.icons.filled.Logout
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.RequestBody.Companion.toRequestBody
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Login
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Person
-import androidx.activity.compose.BackHandler
+import androidx.compose.material.icons.filled.VolunteerActivism
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.navigation.compose.rememberNavController
+import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
@@ -66,26 +74,27 @@ import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
-import androidx.compose.ui.platform.LocalContext
-import android.app.Activity
-import java.util.Locale
-
 import io.ktor.client.*
-import io.ktor.client.engine.okhttp.* // Change to your engine if not using OkHttp (e.g., CIO)
+import io.ktor.client.engine.okhttp.*
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
-//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
-//AQ.Ab8RN6LzRbQyLRJPHXeohfeqf_bymHZZtJjA9vqwtWYG-2cc6Q
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.util.Locale
+
 open class MultiAI : ComponentActivity() {
     private var mInterstitialAd: InterstitialAd? = null
     private var mRewardedAd: RewardedAd? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         MobileAds.initialize(this) {}
         loadInterstitial()
         loadRewarded()
@@ -94,7 +103,7 @@ open class MultiAI : ComponentActivity() {
             MyApplicationTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = Color.LightGray
+                    color = Color(0xFF0F0F1A)
                 ) {
                     var showSplash by remember { mutableStateOf(true) }
                     var showAdTrigger by remember { mutableStateOf(false) }
@@ -108,13 +117,20 @@ open class MultiAI : ComponentActivity() {
                     }
 
                     if (showSplash) {
-                        AppSplashScreen(onTimeout = { 
-                            showSplash = false 
+                        AppSplashScreen(onTimeout = {
+                            showSplash = false
                             showAdTrigger = true
                         })
+                    } else if (!isAuthenticated) {
+                        AuthNavigationFlow(
+                            onAuthSuccess = {
+                                isAuthenticated = true
+                            }
+                        )
                     } else if (showOnboarding) {
                         OnboardingTutorialScreen(
                             onFinished = {
+                                setOnboardingCompleted(context)
                                 showOnboarding = false
                             }
                         )
@@ -126,27 +142,19 @@ open class MultiAI : ComponentActivity() {
                                 showAdTrigger = false
                             }
                         }
-                        if (!isAuthenticated) {
-                            AuthNavigationFlow(
-                                onAuthSuccess = {
-                                    isAuthenticated = true
-                                }
-                            )
-                        } else {
-                            Column {
-                                Box(modifier = Modifier.weight(1f)) {
-                                    SwipeableApp(
-                                        onSignOut = {
-                                            clearAuthCredentials(context)
-                                            isAuthenticated = false
-                                        },
-                                        onViewOnboarding = {
-                                            showOnboarding = true
-                                        }
-                                    )
-                                }
-                                BannerAdView()
+                        Column {
+                            Box(modifier = Modifier.weight(1f)) {
+                                SwipeableApp(
+                                    onSignOut = {
+                                        clearAuthCredentials(context)
+                                        isAuthenticated = false
+                                    },
+                                    onViewOnboarding = {
+                                        showOnboarding = true
+                                    }
+                                )
                             }
+                            BannerAdView()
                         }
                     }
                 }
@@ -175,8 +183,8 @@ open class MultiAI : ComponentActivity() {
 
     fun showRewarded() {
         if (mRewardedAd != null) {
-            mRewardedAd?.show(this) { 
-                loadRewarded() // Reload after showing
+            mRewardedAd?.show(this) {
+                loadRewarded()
             }
         }
     }
@@ -194,8 +202,6 @@ open class MultiAI : ComponentActivity() {
             })
     }
 }
-
-class Practice2 : MultiAI()
 
 @Composable
 fun BannerAdView() {
@@ -217,15 +223,15 @@ fun AppSplashScreen(onTimeout: () -> Unit) {
         delay(1200L)
         onTimeout()
     }
-    
+
     val bgGradient = Brush.verticalGradient(
         colors = listOf(
             Color(0xFF0F0F1A),
-            Color(0xFF1E1E2E), 
+            Color(0xFF1E1E2E),
             Color(0xFF11111B)
         )
     )
-    
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -241,7 +247,7 @@ fun AppSplashScreen(onTimeout: () -> Unit) {
                 modifier = Modifier.size(96.dp),
                 shape = RoundedCornerShape(28.dp),
                 color = Color.White.copy(alpha = 0.08f),
-                border = BorderStroke(1.5.dp, Brush.linearGradient(listOf(Color(0xFF8B5CF6), Color(0xFF38BDF8)))),
+                border = BorderStroke(1.5.dp, Brush.linearGradient(listOf(Color(0xFF00B86B), Color(0xFF38BDF8)))),
                 shadowElevation = 8.dp
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -265,20 +271,21 @@ fun AppSplashScreen(onTimeout: () -> Unit) {
                 text = "Gemini  •  Hugging Face  •  Grok  •  Judge AI",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
-                color = Color(0xFFC4B5FD)
+                color = Color(0xFF00B86B)
             )
 
             Spacer(modifier = Modifier.height(48.dp))
 
             CircularProgressIndicator(
                 modifier = Modifier.size(24.dp),
-                color = Color(0xFF8B5CF6),
+                color = Color(0xFF00B86B),
                 strokeWidth = 2.5.dp
             )
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) {
     val navController = rememberNavController()
@@ -323,6 +330,15 @@ fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) 
         }
     }
 
+    val platformColors = listOf(
+        Color(0xFF4285F4), // Gemini
+        Color(0xFFFF6D00), // Hugging Face
+        Color(0xFF00B86B), // Grok
+        Color(0xFF8B5CF6)  // Judge AI
+    )
+
+    val activeColor = platformColors[pagerState.currentPage]
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -339,7 +355,7 @@ fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) 
                             Surface(
                                 modifier = Modifier.size(48.dp),
                                 shape = CircleShape,
-                                color = Color(0xFF8B5CF6)
+                                color = Color(0xFF00B86B)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Text(
@@ -361,7 +377,7 @@ fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) 
                                 Text(
                                     text = userEmail,
                                     fontSize = 12.sp,
-                                    color = Color(0xFFC4B5FD)
+                                    color = Color(0xFF00B86B)
                                 )
                             }
                         }
@@ -373,25 +389,25 @@ fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) 
 
                 ListItem(
                     headlineContent = { Text("Settings", color = Color.White) },
-                    leadingContent = { Icon(Icons.Default.Settings, null, tint = Color(0xFF8B5CF6)) },
+                    leadingContent = { Icon(Icons.Default.Settings, null, tint = Color(0xFF00B86B)) },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     modifier = Modifier.clickable { onNavigate(4) }
                 )
                 ListItem(
                     headlineContent = { Text("Ads Support", color = Color.White) },
-                    leadingContent = { Icon(Icons.Default.VolunteerActivism, null, tint = Color(0xFF8B5CF6)) },
+                    leadingContent = { Icon(Icons.Default.VolunteerActivism, null, tint = Color(0xFF00B86B)) },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     modifier = Modifier.clickable { onNavigate(5) }
                 )
                 ListItem(
                     headlineContent = { Text("Chat History", color = Color.White) },
-                    leadingContent = { Icon(Icons.Default.History, null, tint = Color(0xFF8B5CF6)) },
+                    leadingContent = { Icon(Icons.Default.History, null, tint = Color(0xFF00B86B)) },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     modifier = Modifier.clickable { onNavigate(6) }
                 )
                 ListItem(
                     headlineContent = { Text("Backup All AI Chats ☁️", color = Color.White) },
-                    leadingContent = { Icon(Icons.Default.CloudUpload, null, tint = Color(0xFF8B5CF6)) },
+                    leadingContent = { Icon(Icons.Default.CloudUpload, null, tint = Color(0xFF00B86B)) },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     modifier = Modifier.clickable {
                         coroutineScope.launch { drawerState.close() }
@@ -400,7 +416,7 @@ fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) 
                 )
                 ListItem(
                     headlineContent = { Text("Onboarding Tutorial", color = Color.White) },
-                    leadingContent = { Icon(Icons.Default.Lightbulb, null, tint = Color(0xFF8B5CF6)) },
+                    leadingContent = { Icon(Icons.Default.Lightbulb, null, tint = Color(0xFF00B86B)) },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     modifier = Modifier.clickable {
                         coroutineScope.launch { drawerState.close() }
@@ -410,8 +426,8 @@ fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) 
                 Spacer(Modifier.weight(1f))
                 HorizontalDivider(color = Color.Gray.copy(alpha = 0.2f))
                 ListItem(
-                    headlineContent = { Text("Sign Out", color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold) },
-                    leadingContent = { Icon(Icons.Default.Logout, null, tint = Color(0xFFFF6B6B)) },
+                    headlineContent = { Text("Sign Out", color = Color(0xFFFF5A5F), fontWeight = FontWeight.Bold) },
+                    leadingContent = { Icon(Icons.AutoMirrored.Filled.Logout, null, tint = Color(0xFFFF5A5F)) },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     modifier = Modifier.clickable {
                         coroutineScope.launch { drawerState.close() }
@@ -437,8 +453,8 @@ fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) 
                         fullScreenPage = null
                         coroutineScope.launch {
                             val targetPage = when(platform) {
-                                "ChatGPT" -> 0
-                                "Gemini" -> 1
+                                "Gemini" -> 0
+                                "Hugging Face" -> 1
                                 "Grok" -> 2
                                 "Judge AI" -> 3
                                 else -> 0
@@ -460,106 +476,104 @@ fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) 
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.White)
+                    .background(Color(0xFFF4F8F5))
                     .imePadding()
-            ) {
-                // Home Screen Header: Left = App Name, Right = MultiSearch Toggle Switch & Backup Icon
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+            )  {
+                // Upper Navigation Header (Clean Light Theme & Well-Spaced Layout)
+                Surface(
+                    shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp),
+                    color = Color.White,
+                    shadowElevation = 2.dp,
+                    border = BorderStroke(1.dp, Color(0xFFE5E7EB))
                 ) {
-                    // LEFT: Menu Icon & App Name
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { coroutineScope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color(0xFF1E1E2E))
-                        }
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = "multiAI",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFF1E1E2E)
-                        )
-                    }
-
-                    // RIGHT: MultiSearch Toggle Switch & Backup Icon
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = if (isGlobalSearch) Color(0xFF10B981).copy(alpha = 0.15f) else Color(0xFFF1F5F9),
-                            border = BorderStroke(1.dp, if (isGlobalSearch) Color(0xFF10B981) else Color(0xFFCBD5E1)),
-                            modifier = Modifier.padding(end = 6.dp)
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                            IconButton(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        drawerState.open()
+                                    }
+                                },
+                                modifier = Modifier.size(36.dp)
                             ) {
-                                Text(
-                                    text = "MultiSearch ⚡",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isGlobalSearch) Color(0xFF059669) else Color(0xFF64748B)
+                                Icon(
+                                    Icons.Default.Menu,
+                                    contentDescription = "Menu",
+                                    tint = Color(0xFF374151)
                                 )
-                                Spacer(Modifier.width(4.dp))
-                                Switch(
-                                    checked = isGlobalSearch,
-                                    onCheckedChange = { isGlobalSearch = it },
-                                    modifier = Modifier.height(24.dp),
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = Color.White,
-                                        checkedTrackColor = Color(0xFF10B981),
-                                        uncheckedThumbColor = Color.White,
-                                        uncheckedTrackColor = Color(0xFFCBD5E1)
+                            }
+
+                            Spacer(Modifier.width(4.dp))
+
+                            Text(
+                                text = "multiAI",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFF111827)
+                            )
+
+                            // Generous spacing between multiAI title and MultiSearch toggle
+                            Spacer(Modifier.weight(1f))
+
+                            // Compact & Sleek MultiSearch Toggle Switch (Clean Neutral White - No Green Background)
+                            Surface(
+                                shape = RoundedCornerShape(50),
+                                color = Color.White,
+                                border = BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                                shadowElevation = 1.dp,
+                                modifier = Modifier.clickable { isGlobalSearch = !isGlobalSearch }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = if (isGlobalSearch) "MultiSearch ON ⚡" else "MultiSearch OFF",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = if (isGlobalSearch) Color(0xFF111827) else Color(0xFF6B7280)
                                     )
+
+                                    Switch(
+                                        checked = isGlobalSearch,
+                                        onCheckedChange = { isGlobalSearch = it },
+                                        modifier = Modifier.scale(0.65f),
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = Color(0xFF111827),
+                                            checkedTrackColor = Color(0xFFE5E7EB),
+                                            uncheckedThumbColor = Color(0xFF9CA3AF),
+                                            uncheckedTrackColor = Color(0xFFF3F4F6)
+                                        )
+                                    )
+                                }
+                            }
+
+                            Spacer(Modifier.width(6.dp))
+
+                            IconButton(
+                                onClick = { backupAllChatsAtOnce(context) },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CloudUpload,
+                                    contentDescription = "Backup All Chats",
+                                    tint = Color(0xFF00B86B),
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
 
-                        IconButton(onClick = { backupAllChatsAtOnce(context) }) {
-                            Icon(
-                                imageVector = Icons.Default.CloudUpload,
-                                contentDescription = "Backup All Chats",
-                                tint = Color(0xFF10B981),
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
+                        // AI Model Platform Navigation Button Bar (Unique Accent Colors & Smaller Badges)
+                        // AI Model Platform Navigation Button Bar (Unique Accent Colors & Smaller Badges)
+
                     }
                 }
-
-                // AI Model Platform Selector Pills Bar
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 2.dp)
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    StylishNavButton(
-                        "GEMINI",
-                        Color(0xFF4285F4),
-                        isSelected = pagerState.currentPage == 0
-                    ) { onNavigate(0) }
-                    StylishNavButton(
-                        "HUGGINGFACE",
-                        Color(0xFF05040E),
-                        isSelected = pagerState.currentPage == 1
-                    ) { onNavigate(1) }
-                    StylishNavButton(
-                        "GROK",
-                        Color(0xFF6366F1),
-                        isSelected = pagerState.currentPage == 2
-                    ) { onNavigate(2) }
-                    StylishNavButton(
-                        "JUDGE AI",
-                        Color(0xFF8B5CF6),
-                        isSelected = pagerState.currentPage == 3
-                    ) { onNavigate(3) }
-                }
-
-                val context = LocalContext.current
 
                 var isGeminiLoading by remember { mutableStateOf(false) }
                 var isHfLoading by remember { mutableStateOf(false) }
@@ -632,15 +646,60 @@ fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) 
                     }
                 }
 
-                HorizontalPager(
-                    state = pagerState,
-                    contentPadding = PaddingValues(horizontal = 0.dp),
-                    modifier = Modifier.fillMaxSize().weight(1f),
-                    beyondViewportPageCount = 3
-                ) { pageIndex ->
-                    val currentSearchWord = if (pageIndex == 3) {
-                        individualSearchWords[3]
-                    } else {
+
+
+                val pageNames = listOf(
+                    "✨ GEMINI",
+                    "🤗 HUGGING FACE",
+                    "🚀 GROK",
+                    "⚖️ JUDGE AI"
+                )
+
+                val platformColors = listOf(
+                    Color(0xFF4285F4), // Gemini
+                    Color(0xFFFF6D00), // Hugging Face
+                    Color(0xFF00B86B), // Grok
+                    Color(0xFF8B5CF6)  // Judge AI
+                )
+
+                val activeColor = platformColors[pagerState.currentPage]
+
+                Button(
+                    onClick = {
+                        // The button displays the currently selected page.
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = activeColor
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 4.dp,
+                        pressedElevation = 8.dp
+                    )
+                ) {
+                    Text(
+                        text = pageNames[pagerState.currentPage],
+                        color = Color.White,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+
+                // 4 Swipeable AI Pages
+                      HorizontalPager(
+                            state = pagerState,
+                            contentPadding = PaddingValues(horizontal = 0.dp),
+                            modifier = Modifier.fillMaxSize().weight(1f),
+                            beyondViewportPageCount = 3
+                        ) { pageIndex ->
+                            val currentSearchWord = if (pageIndex == 3) {
+                                individualSearchWords[3]
+                            } else {
                         if (isGlobalSearch) globalSearchWord else individualSearchWords[pageIndex]
                     }
 
@@ -664,7 +723,20 @@ fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) 
                         0 -> GeminiNav(navController, currentSearchWord, onSearchChange, checker2, isGlobalSearch, onGlobalSubmit, geminiMessages, isGeminiLoading)
                         1 -> HuggingFaceNav(navController, currentSearchWord, onSearchChange, isGlobalSearch, onGlobalSubmit, hfMessages, isHfLoading)
                         2 -> GrokNav(navController, currentSearchWord, onSearchChange, isGlobalSearch, onGlobalSubmit, grokMessages, isGrokLoading)
-                        3 -> JudgeAiNav(navController, currentSearchWord, onSearchChange, isGlobalSearch, onOpenSettings = { fullScreenPage = 4 }, onGlobalSubmit = onGlobalSubmit, externalMessages = judgeMessages)
+                        3 -> JudgeAiNav(
+                            navController,
+                            currentSearchWord,
+                            onSearchChange,
+                            isGlobalSearch,
+                            onOpenSettings = { fullScreenPage = 4 },
+                            onGlobalSubmit = onGlobalSubmit,
+                            externalMessages = judgeMessages,
+                            sourceMessages = mapOf(
+                                "Gemini" to geminiMessages.toList(),
+                                "Hugging Face" to hfMessages.toList(),
+                                "Grok" to grokMessages.toList()
+                            )
+                        )
                     }
                 }
             }
@@ -676,35 +748,38 @@ fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) 
 fun AdsSupportPage(onBack: () -> Unit) {
     val context = LocalContext.current as Activity
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier.fillMaxSize().background(Color(0xFF0F0F1A)).padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
             }
-            Text("Support with Ads", style = MaterialTheme.typography.headlineMedium)
+            Text("Support with Ads", style = MaterialTheme.typography.headlineMedium, color = Color.White)
         }
         Spacer(Modifier.height(24.dp))
         Button(
             onClick = { (context as? MultiAI)?.showInterstitial() },
-            modifier = Modifier.fillMaxWidth().height(56.dp)
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00B86B)),
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(16.dp)
         ) {
-            Text("Watch Interstitial Ad")
+            Text("Watch Interstitial Ad", fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.height(16.dp))
         Button(
-            onClick = { 
+            onClick = {
                 val activity = context as? MultiAI
-                activity?.showRewarded() 
+                activity?.showRewarded()
             },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
             modifier = Modifier.fillMaxWidth().height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+            shape = RoundedCornerShape(16.dp)
         ) {
-            Text("Watch Rewarded Ad")
+            Text("Watch Rewarded Ad", fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.height(24.dp))
-        Text("Support us by viewing these ads", style = MaterialTheme.typography.bodyMedium)
+        Text("Support us by viewing these ads", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
         Spacer(Modifier.weight(1f))
         BannerAdView()
     }
@@ -714,7 +789,7 @@ fun AdsSupportPage(onBack: () -> Unit) {
 fun SettingsPage(isGlobalSearch: Boolean, onGlobalSearchChange: (Boolean) -> Unit, onBack: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color.White
+        color = Color(0xFF0F0F1A)
     ) {
         Column(
             modifier = Modifier
@@ -729,9 +804,9 @@ fun SettingsPage(isGlobalSearch: Boolean, onGlobalSearchChange: (Boolean) -> Uni
             ) {
                 IconButton(onClick = onBack) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = Color(0xFF1E1E2E)
+                        tint = Color.White
                     )
                 }
                 Spacer(Modifier.width(8.dp))
@@ -739,7 +814,7 @@ fun SettingsPage(isGlobalSearch: Boolean, onGlobalSearchChange: (Boolean) -> Uni
                     text = "Settings ⚙️",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    color = Color(0xFF1E1E2E)
+                    color = Color.White
                 )
             }
 
@@ -748,9 +823,9 @@ fun SettingsPage(isGlobalSearch: Boolean, onGlobalSearchChange: (Boolean) -> Uni
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
-                color = Color(0xFFF8FAFC),
-                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                shadowElevation = 2.dp
+                color = Color(0xFF1E1E2E),
+                border = BorderStroke(1.dp, Color(0xFF374151)),
+                shadowElevation = 4.dp
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -763,13 +838,13 @@ fun SettingsPage(isGlobalSearch: Boolean, onGlobalSearchChange: (Boolean) -> Uni
                                 text = "MultiSearch Mode ⚡",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF0F172A)
+                                color = Color.White
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 text = "Synchronize query typing & search across Gemini, Hugging Face, and Grok simultaneously.",
                                 fontSize = 13.sp,
-                                color = Color(0xFF64748B),
+                                color = Color.Gray,
                                 lineHeight = 18.sp
                             )
                         }
@@ -779,9 +854,9 @@ fun SettingsPage(isGlobalSearch: Boolean, onGlobalSearchChange: (Boolean) -> Uni
                             onCheckedChange = onGlobalSearchChange,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = Color(0xFF10B981),
-                                uncheckedThumbColor = Color.White,
-                                uncheckedTrackColor = Color(0xFFCBD5E1)
+                                checkedTrackColor = Color(0xFF00B86B),
+                                uncheckedThumbColor = Color.Gray,
+                                uncheckedTrackColor = Color(0xFF1E1E2E)
                             )
                         )
                     }
@@ -792,44 +867,44 @@ fun SettingsPage(isGlobalSearch: Boolean, onGlobalSearchChange: (Boolean) -> Uni
 }
 
 @Composable
-fun StylishNavButton(text: String, color: Color, isSelected: Boolean, onClick: () -> Unit) {
-    val scale by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (isSelected) 1.04f else 1.0f,
-        animationSpec = androidx.compose.animation.core.spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow),
-        label = "navButtonScale"
+fun StylishNavButton(
+    text: String,
+    color: Color,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val scale by animateFloatAsState(
+        targetValue = if (isSelected) 1.03f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "navScale"
     )
 
     Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(22.dp),
-        color = if (isSelected) color else Color.White,
-        contentColor = if (isSelected) Color.White else color,
-        border = BorderStroke(if (isSelected) 2.dp else 1.5.dp, color),
-        shadowElevation = if (isSelected) 6.dp else 1.dp,
         modifier = Modifier
-            .padding(horizontal = 4.dp, vertical = 2.dp)
-            .height(40.dp)
+            .padding(horizontal = 4.dp, vertical = 4.dp)
+            .scale(scale)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        color = if (isSelected) color else Color(0xFFF3F4F6),
+        border = BorderStroke(
+            1.dp,
+            if (isSelected) color else Color(0xFFE5E7EB)
+        ),
+        shadowElevation = if (isSelected) 2.dp else 0.dp
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (isSelected) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF10B981))
-                )
-                Spacer(Modifier.width(6.dp))
-            }
-            Text(
-                text = text,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 12.sp,
-                letterSpacing = 0.5.sp
-            )
-        }
+        Text(
+            text = text,
+            modifier = Modifier.padding(
+                horizontal = 12.dp,
+                vertical = 7.dp
+            ),
+            color = if (isSelected) Color.White else Color(0xFF4B5563),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
@@ -841,22 +916,22 @@ fun ChatHistoryPage(onBack: () -> Unit, onRestore: (String) -> Unit = {}) {
     var editNameText by remember { mutableStateOf("") }
     var selectedSession by remember { mutableStateOf<ChatSession?>(null) }
 
-    Column(modifier = Modifier.fillMaxSize().background(Color.LightGray)) {
+    Column(modifier = Modifier.fillMaxSize().background(Color(0xFF0F0F1A))) {
         Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
             }
-            Text("Chat History", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleLarge)
+            Text("Chat History", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleLarge, color = Color.White)
         }
-        HorizontalDivider()
+        HorizontalDivider(color = Color.Gray.copy(alpha = 0.2f))
 
         if (selectedSession != null) {
             Row(modifier = Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 TextButton(onClick = { selectedSession = null }) {
-                    Text("< Back to list", fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text("< Back to list", fontWeight = FontWeight.Bold, color = Color(0xFF00B86B))
                 }
-                Text(selectedSession!!.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 8.dp))
+                Text(selectedSession!!.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 8.dp), color = Color.White)
             }
             LazyColumn(modifier = Modifier.weight(1f).padding(16.dp)) {
                 items(selectedSession!!.messages) { msg ->
@@ -865,11 +940,11 @@ fun ChatHistoryPage(onBack: () -> Unit, onRestore: (String) -> Unit = {}) {
                         horizontalAlignment = if (msg.isFromAI) Alignment.Start else Alignment.End
                     ) {
                         Surface(
-                            color = if (msg.isFromAI) Color(0xFF343541) else Color(0xFF131312),
+                            color = if (msg.isFromAI) Color(0xFF28283D) else Color(0xFF00B86B),
                             contentColor = Color.White,
                             shape = RoundedCornerShape(16.dp)
                         ) {
-                            Text(msg.content, modifier = Modifier.padding(12.dp), fontSize = 16.sp)
+                            Text(msg.content, modifier = Modifier.padding(12.dp), fontSize = 15.sp)
                         }
                     }
                 }
@@ -877,19 +952,21 @@ fun ChatHistoryPage(onBack: () -> Unit, onRestore: (String) -> Unit = {}) {
         } else {
             if (sessions.isEmpty()) {
                 Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text("No saved conversations yet.")
+                    Text("No saved conversations yet.", color = Color.Gray)
                 }
             } else {
                 LazyColumn(modifier = Modifier.weight(1f)) {
                     items(sessions) { session ->
                         ListItem(
                             modifier = Modifier.clickable { selectedSession = session },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             headlineContent = {
                                 if (editingSessionId == session.id) {
                                     OutlinedTextField(
                                         value = editNameText,
                                         onValueChange = { editNameText = it },
                                         singleLine = true,
+                                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White),
                                         trailingIcon = {
                                             IconButton(onClick = {
                                                 if (editNameText.isNotBlank()) {
@@ -898,16 +975,16 @@ fun ChatHistoryPage(onBack: () -> Unit, onRestore: (String) -> Unit = {}) {
                                                     editingSessionId = null
                                                 }
                                             }) {
-                                                Icon(Icons.Default.Save, null)
+                                                Icon(Icons.Default.Save, null, tint = Color(0xFF00B86B))
                                             }
                                         }
                                     )
                                 } else {
-                                    Text(session.name)
+                                    Text(session.name, color = Color.White, fontWeight = FontWeight.Bold)
                                 }
                             },
-                            supportingContent = { 
-                                Text("${session.platform} • ${session.messages.size} messages") 
+                            supportingContent = {
+                                Text("${session.platform} • ${session.messages.size} messages", color = Color.Gray)
                             },
                             trailingContent = {
                                 Row {
@@ -915,19 +992,19 @@ fun ChatHistoryPage(onBack: () -> Unit, onRestore: (String) -> Unit = {}) {
                                         saveActiveChat(context, session.platform, session.messages)
                                         onRestore(session.platform)
                                     }) {
-                                        Icon(Icons.Default.Refresh, contentDescription = "Restore Session", tint = Color.Blue)
+                                        Icon(Icons.Default.Refresh, contentDescription = "Restore Session", tint = Color(0xFF00B86B))
                                     }
                                     IconButton(onClick = {
                                         editingSessionId = session.id
                                         editNameText = session.name
                                     }) {
-                                        Icon(Icons.Default.Edit, contentDescription = "Edit Name")
+                                        Icon(Icons.Default.Edit, contentDescription = "Edit Name", tint = Color.Gray)
                                     }
                                     IconButton(onClick = {
                                         deleteChatSession(context, session.id)
                                         sessions = getChatSessions(context).sortedByDescending { it.timestamp }
                                     }) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Delete Session", tint = Color.Red)
+                                        Icon(Icons.Default.Delete, contentDescription = "Delete Session", tint = Color(0xFFFF5A5F))
                                     }
                                 }
                             }
@@ -939,163 +1016,9 @@ fun ChatHistoryPage(onBack: () -> Unit, onRestore: (String) -> Unit = {}) {
     }
 }
 
-//suspend fun mockChatGPTResponse(query: String): String {
-//    delay(1000) // Simulate network delay
-//    return "This is a mock ChatGPT response to: $query"
-//}
-//
-// "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"
-
-
-// Put your new, active restricted key directly here as a string
-
-//header(HttpHeaders.Authorization, "Bearer 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")
-
-//val geminiApiKey = "AQ.Ab8RN6LBo4isIYAY4Pg8hzR2ZZ1KRr8rCssYLxR1tzMX3JqyqA"
-
-
-
-private val client = HttpClient(OkHttp) {
-
-    install(ContentNegotiation) {
-        json(Json {
-            ignoreUnknownKeys = true
-            prettyPrint = true
-        })
-    }
-
-    install(HttpTimeout) {
-        requestTimeoutMillis = 120_000
-        connectTimeoutMillis = 30_000
-        connectTimeoutMillis = 30_000
-        socketTimeoutMillis = 120_000
-    }
-}
-
-suspend fun performBackendLogin(context: android.content.Context, email: String, pass: String): Pair<Boolean, String> {
-    return withContext(Dispatchers.IO) {
-        val maxAttempts = 2
-        var lastError = "Unable to connect to backend server."
-
-        for (attempt in 1..maxAttempts) {
-            try {
-                val jsonPayload = JsonObject(
-                    mapOf(
-                        "email" to JsonPrimitive(email),
-                        "password" to JsonPrimitive(pass)
-                    )
-                )
-
-                val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
-                val requestBody = jsonPayload.toString().toRequestBody(mediaType)
-
-                val request = okhttp3.Request.Builder()
-                    .url("https://multisearch-ai-backend.onrender.com/auth/login")
-                    .post(requestBody)
-                    .build()
-
-                val response = sharedOkHttpClient.newCall(request).execute()
-                val responseText = response.body?.string() ?: ""
-
-                if (responseText.isBlank()) {
-                    lastError = "Empty server response received."
-                    continue
-                }
-
-                val jsonElement = Json.parseToJsonElement(responseText).jsonObject
-                val isSuccess = jsonElement["success"]?.jsonPrimitive?.boolean ?: false
-
-                if (isSuccess && response.isSuccessful) {
-                    val token = jsonElement["accessToken"]?.jsonPrimitive?.content ?: ""
-                    val refreshToken = jsonElement["refreshToken"]?.jsonPrimitive?.content ?: ""
-                    val message = jsonElement["message"]?.jsonPrimitive?.content ?: "Logged in successfully!"
-                    if (token.isNotBlank()) {
-                        saveAuthCredentials(context, token, refreshToken, email)
-                    }
-                    return@withContext Pair(true, message)
-                } else {
-                    val errorMsg = jsonElement["error"]?.jsonPrimitive?.content ?: "Login failed (${response.code})"
-                    return@withContext Pair(false, errorMsg)
-                }
-            } catch (e: Exception) {
-                lastError = if (e.localizedMessage?.contains("SSL", ignoreCase = true) == true || e.localizedMessage?.contains("timeout", ignoreCase = true) == true) {
-                    "Server is waking up. Retrying connection..."
-                } else {
-                    "Connection error: ${e.localizedMessage ?: "Unable to connect"}"
-                }
-                if (attempt < maxAttempts) {
-                    kotlinx.coroutines.delay(2000L)
-                }
-            }
-        }
-        Pair(false, lastError.replace("Retrying connection...", "Please tap Sign In again."))
-    }
-}
-
-suspend fun performBackendRegister(context: android.content.Context, name: String, email: String, pass: String): Pair<Boolean, String> {
-    return withContext(Dispatchers.IO) {
-        val maxAttempts = 2
-        var lastError = "Unable to connect to backend server."
-
-        for (attempt in 1..maxAttempts) {
-            try {
-                val jsonPayload = JsonObject(
-                    mapOf(
-                        "name" to JsonPrimitive(name),
-                        "email" to JsonPrimitive(email),
-                        "password" to JsonPrimitive(pass)
-                    )
-                )
-
-                val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
-                val requestBody = jsonPayload.toString().toRequestBody(mediaType)
-
-                val request = okhttp3.Request.Builder()
-                    .url("https://multisearch-ai-backend.onrender.com/auth/register")
-                    .post(requestBody)
-                    .build()
-
-                val response = sharedOkHttpClient.newCall(request).execute()
-                val responseText = response.body?.string() ?: ""
-
-                if (responseText.isBlank()) {
-                    lastError = "Empty server response received."
-                    continue
-                }
-
-                val jsonElement = Json.parseToJsonElement(responseText).jsonObject
-                val isSuccess = jsonElement["success"]?.jsonPrimitive?.boolean ?: false
-
-                if (isSuccess && response.isSuccessful) {
-                    val token = jsonElement["accessToken"]?.jsonPrimitive?.content ?: ""
-                    val refreshToken = jsonElement["refreshToken"]?.jsonPrimitive?.content ?: ""
-                    val message = jsonElement["message"]?.jsonPrimitive?.content ?: "Account created successfully!"
-                    if (token.isNotBlank()) {
-                        saveAuthCredentials(context, token, refreshToken, email)
-                    }
-                    return@withContext Pair(true, message)
-                } else {
-                    val errorMsg = jsonElement["error"]?.jsonPrimitive?.content ?: "Registration failed (${response.code})"
-                    return@withContext Pair(false, errorMsg)
-                }
-            } catch (e: Exception) {
-                lastError = if (e.localizedMessage?.contains("SSL", ignoreCase = true) == true || e.localizedMessage?.contains("timeout", ignoreCase = true) == true) {
-                    "Server is waking up. Retrying connection..."
-                } else {
-                    "Connection error: ${e.localizedMessage ?: "Unable to connect"}"
-                }
-                if (attempt < maxAttempts) {
-                    kotlinx.coroutines.delay(2000L)
-                }
-            }
-        }
-        Pair(false, lastError.replace("Retrying connection...", "Please tap Register again."))
-    }
-}
-
 @Composable
 fun AuthNavigationFlow(onAuthSuccess: () -> Unit) {
-    var authPage by remember { mutableIntStateOf(2) } // Starts directly on Register / Sign Up page for new installs
+    var authPage by remember { mutableIntStateOf(2) }
     val activity = (LocalContext.current as? Activity)
 
     BackHandler {
@@ -1150,7 +1073,7 @@ fun WelcomeAuthPage(onNavigateToLogin: () -> Unit, onNavigateToRegister: () -> U
                 modifier = Modifier.size(96.dp),
                 shape = RoundedCornerShape(28.dp),
                 color = Color.White.copy(alpha = 0.08f),
-                border = BorderStroke(1.5.dp, Brush.linearGradient(listOf(Color(0xFF8B5CF6), Color(0xFF38BDF8)))),
+                border = BorderStroke(1.5.dp, Brush.linearGradient(listOf(Color(0xFF00B86B), Color(0xFF38BDF8)))),
                 shadowElevation = 8.dp
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -1174,7 +1097,7 @@ fun WelcomeAuthPage(onNavigateToLogin: () -> Unit, onNavigateToRegister: () -> U
                 text = "Gemini • Hugging Face • Grok • Judge AI",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
-                color = Color(0xFFC4B5FD)
+                color = Color(0xFF00B86B)
             )
 
             Spacer(modifier = Modifier.height(36.dp))
@@ -1199,11 +1122,11 @@ fun WelcomeAuthPage(onNavigateToLogin: () -> Unit, onNavigateToRegister: () -> U
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00B86B)),
                 shape = RoundedCornerShape(16.dp),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
             ) {
-                Icon(Icons.Default.Login, contentDescription = null, tint = Color.White)
+                Icon(Icons.AutoMirrored.Filled.Login, contentDescription = null, tint = Color.White)
                 Spacer(Modifier.width(8.dp))
                 Text("Sign In to Continue", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
             }
@@ -1215,12 +1138,12 @@ fun WelcomeAuthPage(onNavigateToLogin: () -> Unit, onNavigateToRegister: () -> U
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
-                border = BorderStroke(1.5.dp, Color(0xFF8B5CF6)),
+                border = BorderStroke(1.5.dp, Color(0xFF00B86B)),
                 shape = RoundedCornerShape(16.dp)
             ) {
-                Icon(Icons.Default.PersonAdd, contentDescription = null, tint = Color(0xFFC4B5FD))
+                Icon(Icons.Default.PersonAdd, contentDescription = null, tint = Color(0xFF00B86B))
                 Spacer(Modifier.width(8.dp))
-                Text("Create New Account", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFFC4B5FD))
+                Text("Create New Account", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF00B86B))
             }
         }
     }
@@ -1248,7 +1171,7 @@ fun SignUpPage(onBack: () -> Unit, onSwitchToRegister: () -> Unit, onAuthSuccess
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
             }
             Text("Sign In", style = MaterialTheme.typography.titleLarge, color = Color.White)
         }
@@ -1278,9 +1201,9 @@ fun SignUpPage(onBack: () -> Unit, onSwitchToRegister: () -> Unit, onAuthSuccess
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF8B5CF6),
+                focusedBorderColor = Color(0xFF00B86B),
                 unfocusedBorderColor = Color.Gray,
-                focusedLabelColor = Color(0xFF8B5CF6),
+                focusedLabelColor = Color(0xFF00B86B),
                 unfocusedLabelColor = Color.LightGray,
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White
@@ -1308,9 +1231,9 @@ fun SignUpPage(onBack: () -> Unit, onSwitchToRegister: () -> Unit, onAuthSuccess
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF8B5CF6),
+                focusedBorderColor = Color(0xFF00B86B),
                 unfocusedBorderColor = Color.Gray,
-                focusedLabelColor = Color(0xFF8B5CF6),
+                focusedLabelColor = Color(0xFF00B86B),
                 unfocusedLabelColor = Color.LightGray,
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White
@@ -1339,7 +1262,7 @@ fun SignUpPage(onBack: () -> Unit, onSwitchToRegister: () -> Unit, onAuthSuccess
             },
             enabled = !isLoading,
             modifier = Modifier.fillMaxWidth().height(52.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00B86B)),
             shape = RoundedCornerShape(16.dp)
         ) {
             if (isLoading) {
@@ -1354,7 +1277,7 @@ fun SignUpPage(onBack: () -> Unit, onSwitchToRegister: () -> Unit, onAuthSuccess
         Spacer(modifier = Modifier.height(24.dp))
 
         TextButton(onClick = onSwitchToRegister) {
-            Text("Don't have an account? Register here", color = Color(0xFFC4B5FD))
+            Text("Don't have an account? Register here", color = Color(0xFF00B86B))
         }
     }
 }
@@ -1383,7 +1306,7 @@ fun RegisterPage(onBack: () -> Unit, onSwitchToLogin: () -> Unit, onAuthSuccess:
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
             }
             Text("Create Account", style = MaterialTheme.typography.titleLarge, color = Color.White)
         }
@@ -1413,9 +1336,9 @@ fun RegisterPage(onBack: () -> Unit, onSwitchToLogin: () -> Unit, onAuthSuccess:
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF8B5CF6),
+                focusedBorderColor = Color(0xFF00B86B),
                 unfocusedBorderColor = Color.Gray,
-                focusedLabelColor = Color(0xFF8B5CF6),
+                focusedLabelColor = Color(0xFF00B86B),
                 unfocusedLabelColor = Color.LightGray,
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White
@@ -1433,9 +1356,9 @@ fun RegisterPage(onBack: () -> Unit, onSwitchToLogin: () -> Unit, onAuthSuccess:
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF8B5CF6),
+                focusedBorderColor = Color(0xFF00B86B),
                 unfocusedBorderColor = Color.Gray,
-                focusedLabelColor = Color(0xFF8B5CF6),
+                focusedLabelColor = Color(0xFF00B86B),
                 unfocusedLabelColor = Color.LightGray,
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White
@@ -1463,9 +1386,9 @@ fun RegisterPage(onBack: () -> Unit, onSwitchToLogin: () -> Unit, onAuthSuccess:
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF8B5CF6),
+                focusedBorderColor = Color(0xFF00B86B),
                 unfocusedBorderColor = Color.Gray,
-                focusedLabelColor = Color(0xFF8B5CF6),
+                focusedLabelColor = Color(0xFF00B86B),
                 unfocusedLabelColor = Color.LightGray,
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White
@@ -1484,9 +1407,9 @@ fun RegisterPage(onBack: () -> Unit, onSwitchToLogin: () -> Unit, onAuthSuccess:
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF8B5CF6),
+                focusedBorderColor = Color(0xFF00B86B),
                 unfocusedBorderColor = Color.Gray,
-                focusedLabelColor = Color(0xFF8B5CF6),
+                focusedLabelColor = Color(0xFF00B86B),
                 unfocusedLabelColor = Color.LightGray,
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White
@@ -1519,7 +1442,7 @@ fun RegisterPage(onBack: () -> Unit, onSwitchToLogin: () -> Unit, onAuthSuccess:
             },
             enabled = !isLoading,
             modifier = Modifier.fillMaxWidth().height(52.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6)),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00B86B)),
             shape = RoundedCornerShape(16.dp)
         ) {
             if (isLoading) {
@@ -1534,7 +1457,7 @@ fun RegisterPage(onBack: () -> Unit, onSwitchToLogin: () -> Unit, onAuthSuccess:
         Spacer(modifier = Modifier.height(24.dp))
 
         TextButton(onClick = onSwitchToLogin) {
-            Text("Already have an account? Sign In", color = Color(0xFFC4B5FD))
+            Text("Already have an account? Sign In", color = Color(0xFF00B86B))
         }
     }
 }

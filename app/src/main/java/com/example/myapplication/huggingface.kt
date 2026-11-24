@@ -1,17 +1,40 @@
 package com.example.myapplication
 
 import android.util.Log
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -19,15 +42,13 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.io.IOException
-import java.util.concurrent.TimeUnit
 
 private val hfOkHttpClient = OkHttpClient.Builder()
     .connectTimeout(30, TimeUnit.SECONDS)
@@ -142,7 +163,6 @@ suspend fun getHuggingFaceResponse(history: List<MessageData>): String {
             }
         }
 
-        // Seamless Fallback to Gemini when rate-limited so user never sees a rate-limit error!
         return@withContext try {
             getGeminiResponse(history)
         } catch (e: Exception) {
@@ -158,7 +178,7 @@ fun HuggingFaceNav(
     onSearchWordChange: (String) -> Unit = {},
     isGlobalSearch: Boolean = false,
     onGlobalSubmit: (String) -> Unit = {},
-    externalMessages: androidx.compose.runtime.snapshots.SnapshotStateList<MessageData>? = null,
+    externalMessages: SnapshotStateList<MessageData>? = null,
     externalIsLoading: Boolean = false
 ) {
     val context = LocalContext.current
@@ -171,11 +191,11 @@ fun HuggingFaceNav(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color.LightGray
+        color = Color(0xFFF5F7F9)
     ) {
         if (showChat) {
             ChatStructure(
-                nav = Color(0xFF05040E),
+                nav = Color(0xFFFF6D00),
                 platformName = "Hugging Face",
                 searchWord = searchWord,
                 onSearchWordChange = onSearchWordChange,
@@ -185,38 +205,89 @@ fun HuggingFaceNav(
                 externalIsLoading = externalIsLoading
             )
         } else {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(20.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "HUGGING FACE AI SEARCH",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF05040E)
-                )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Button(
-                    onClick = { showChat = true },
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF05040E)
-                    )
+                    shape = RoundedCornerShape(26.dp),
+                    color = Color.White,
+                    shadowElevation = 3.dp
                 ) {
-                    Text("Search with Hugging Face")
-                }
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFFFF3E0)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("🤗", fontSize = 26.sp)
+                        }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
 
-                TextButton(
-                    onClick = { navController.popBackStack() }
-                ) {
-                    Text("Back to Dashboard", color = Color.Gray)
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = Color(0xFFFFF3E0)
+                        ) {
+                            Text(
+                                text = "OPEN AI ENGINE",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFFFF6D00),
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Text(
+                            text = "Hugging Face AI",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFF111827)
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Text(
+                            text = "Clear, structured answers with smart context handling.",
+                            fontSize = 13.sp,
+                            color = Color(0xFF6B7280),
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        Button(
+                            onClick = { showChat = true },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFFF6D00)
+                            )
+                        ) {
+                            Text("Start Hugging Face Chat ⚡", fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        TextButton(
+                            onClick = { navController.popBackStack() }
+                        ) {
+                            Text("Back to Dashboard", color = Color(0xFF6B7280), fontWeight = FontWeight.SemiBold)
+                        }
+                    }
                 }
             }
         }

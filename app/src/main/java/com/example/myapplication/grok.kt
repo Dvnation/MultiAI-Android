@@ -1,27 +1,58 @@
 package com.example.myapplication
 
 import android.util.Log
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.http.*
+import io.ktor.client.request.accept
+import io.ktor.client.request.header
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 suspend fun getGrokResponse(history: List<MessageData>): String {
@@ -36,7 +67,6 @@ suspend fun getGrokResponse(history: List<MessageData>): String {
         )
     )
 
-    // Smart context length management to prevent HTTP 413 Payload Too Large
     val trimmedHistory = if (history.size > 5) history.takeLast(5) else history
     val lastUserIndex = trimmedHistory.indexOfLast { !it.isFromAI }
 
@@ -133,12 +163,8 @@ suspend fun getGrokResponse(history: List<MessageData>): String {
         }
     }
 
-    // Seamless Fallback to Gemini when rate-limited so user never sees a rate-limit error!
-    return try {
-        getGeminiResponse(history)
-    } catch (e: Exception) {
-        "Grok is temporarily busy. Please ask your question again in a moment."
-    }
+    return "Grok is temporarily unavailable or rate-limited. Please try again shortly."
+
 }
 
 @Composable
@@ -148,21 +174,22 @@ fun GrokNav(
     onSearchWordChange: (String) -> Unit = {},
     isGlobalSearch: Boolean = false,
     onGlobalSubmit: (String) -> Unit = {},
-    externalMessages: androidx.compose.runtime.snapshots.SnapshotStateList<MessageData>? = null,
+    externalMessages: SnapshotStateList<MessageData>? = null,
     externalIsLoading: Boolean = false
 ) {
     val context = LocalContext.current
-    var isPressed by remember { 
-        mutableStateOf(getActiveChat(context, "Grok").isNotEmpty()) 
+    val haptics = LocalHapticFeedback.current
+    var isPressed by remember {
+        mutableStateOf(getActiveChat(context, "Grok").isNotEmpty())
     }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color.LightGray
+        color = Color(0xFFF5F7F9)
     ) {
         if (isPressed) {
             ChatStructure(
-                nav = Color(0xFF6366F1),
+                nav = Color(0xFF008A50),
                 platformName = "Grok",
                 searchWord = searchWord,
                 onSearchWordChange = onSearchWordChange,
@@ -172,34 +199,94 @@ fun GrokNav(
                 externalIsLoading = externalIsLoading
             )
         } else {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(20.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "GROK AI SEARCH",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF6366F1)
-                )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Button(
-                    onClick = { isPressed = true },
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1))
+                    shape = RoundedCornerShape(26.dp),
+                    color = Color.White,
+                    shadowElevation = 3.dp
                 ) {
-                    Text("Search with Grok")
-                }
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(62.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFE6FBF1)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("⚡", fontSize = 30.sp)
+                        }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
 
-                TextButton(onClick = { navController.popBackStack() }) {
-                    Text("Back to Dashboard", color = Color.Gray)
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = Color(0xFFE6FBF1)
+                        ) {
+                            Text(
+                                text = "GROK ENGINE",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFF008A50),
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Text(
+                            text = "GROK AI SEARCH",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFF111827),
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Text(
+                            text = "Fast, sharp responses with automatic fallback protection.",
+                            fontSize = 13.sp,
+                            color = Color(0xFF6B7280),
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        Button(
+                            onClick = {
+                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                isPressed = true
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00B86B))
+                        ) {
+                            Text(
+                                text = "Search with Grok 🚀",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = Color.White
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        TextButton(onClick = { navController.popBackStack() }) {
+                            Text("Back to Dashboard", color = Color(0xFF6B7280), fontWeight = FontWeight.SemiBold)
+                        }
+                    }
                 }
             }
         }

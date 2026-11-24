@@ -1,286 +1,370 @@
-//package com.example.myapplication
-
-
-
-
-package com.example.myapplication // Change this to match your actual package name
+package com.example.myapplication
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusEvent
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import android.widget.TextView
-import android.widget.Button
-import android.widget.EditText
-import android.widget.LinearLayout
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
-//import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import kotlin.math.round
+import com.example.myapplication.ui.theme.MyApplicationTheme
+import kotlinx.coroutines.launch
 
+class MainActivity : MultiAI()
 
-class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            CalculatorScreen()
-        }
-    }
-}
-
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun CalculatorScreen() {
-    // State variables to hold the numbers and result
-    var number1 by remember { mutableStateOf("") }
-    var number2 by remember { mutableStateOf("") }
-    var result by remember { mutableStateOf("0") }
-    var firstName by remember { mutableStateOf("") }
-    var lastName by remember { mutableStateOf("") }
-    var enabler by remember { mutableStateOf(true) }
-    var add by remember { mutableStateOf(true) }
-    var multiply by remember { mutableStateOf(false) }
-    var subtract by remember { mutableStateOf(false) }
-    var divide by remember { mutableStateOf(false) }
-    var results by remember { mutableStateOf("") }
-    val focus1 = remember { FocusRequester() }
-    var keyboard = LocalSoftwareKeyboardController.current
-    var focusManager = LocalFocusManager.current
+fun MultiMainApp() {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
-    val scrolls = rememberScrollState()
+    var isAuthenticated by remember { mutableStateOf(getAuthToken(context) != null) }
+    var hasOnboarded by remember { mutableStateOf(hasCompletedOnboarding(context)) }
 
-//    LaunchedEffect(Unit) {
-//        scrolls.scrollTo(0)
-//    }
+    if (!isAuthenticated) {
+        // Step 1: Registration and Login Screen
+        AuthScreen(onAuthSuccess = {
+            isAuthenticated = true
+        })
+    } else if (!hasOnboarded) {
+        // Step 2: Interactive Onboarding Tutorial Screen
+        OnboardingTutorialScreen(onFinished = {
+            setOnboardingCompleted(context)
+            hasOnboarded = true
+        })
+    } else {
+        // Step 3: Main App with 4 Swipeable AI Pages
+        val pagerState = rememberPagerState(initialPage = 0, pageCount = { 4 })
+        var isGlobalSearch by remember { mutableStateOf(false) }
+        var sharedSearchWord by remember { mutableStateOf("") }
+        var isGlobalLoading by remember { mutableStateOf(false) }
 
-
-    // Column stacks items vertically
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF5F5F5)) // Light gray background styling
-            .verticalScroll(scrolls)
-            .imePadding()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-
-
-        ) {
-            Text("TEXT1", color = Color.Blue)
-            Text("TEXT2", color = Color.Red)
-            Text("TEXT3", color = Color.Black)
-
+        // State lists for global search results
+        val geminiMessages = remember {
+            val active = getActiveChat(context, "Gemini")
+            mutableStateListOf<MessageData>().apply { addAll(active) }
+        }
+        val huggingFaceMessages = remember {
+            val active = getActiveChat(context, "Hugging Face")
+            mutableStateListOf<MessageData>().apply { addAll(active) }
+        }
+        val grokMessages = remember {
+            val active = getActiveChat(context, "Grok")
+            mutableStateListOf<MessageData>().apply { addAll(active) }
+        }
+        val judgeMessages = remember {
+            val active = getActiveChat(context, "Judge AI")
+            mutableStateListOf<MessageData>().apply { addAll(active) }
         }
 
-//rovali row= vertical alignment
-        Column(
+        // Unique Color palette for each AI Page
+        val platformColors = listOf(
+            Color(0xFF4285F4), // Gemini: Google Blue
+            Color(0xFFFFB020), // Hugging Face: Amber Gold
+            Color(0xFF00B86B), // Grok: Emerald Mint
+            Color(0xFF8B5CF6)  // Judge AI: Purple Violet
+        )
 
-            modifier = Modifier
-                .fillMaxWidth()
+        val activeColor = platformColors[pagerState.currentPage]
 
-                .padding(vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(13.dp),
-
-
-            ) {
-
-            OutlinedTextField(
-                value = number1,
-                onValueChange = { number1 = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Number 1") }
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-
-                Button(
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336)), // Red Color
-                    shape = RoundedCornerShape(12.dp),
-
-                    onClick = {
-                        result = "plus"
-
-                        focus1.requestFocus()
-
-                        keyboard?.show()
-
-                        add = true
-
-
-                    }
+        Scaffold(
+            topBar = {
+                Surface(
+                    color = Color(0xFF0F0F1A),
+                    shadowElevation = 6.dp
                 ) {
-                    Text("+", fontSize = 24.sp)
-                }
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        // Top Navigation Header
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Surface(
+                                    modifier = Modifier.size(36.dp),
+                                    shape = CircleShape,
+                                    color = activeColor
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text("⚡", fontSize = 18.sp)
+                                    }
+                                }
 
-                Button(
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336)), // Red Color
-                    shape = RoundedCornerShape(12.dp),
-                    onClick = {
-                        result = "multiply"
-                        focus1.requestFocus()
+                                Column {
+                                    Text(
+                                        text = "MultiAI",
+                                        fontSize = 19.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color.White
+                                    )
+                                    getUserEmail(context)?.let { email ->
+                                        Text(
+                                            text = email,
+                                            fontSize = 10.sp,
+                                            color = Color.Gray
+                                        )
+                                    }
+                                }
+                            }
 
-                        multiply = true
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                // Smooth & Noticeable MultiSearch Toggle Switch
+                                Surface(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(50))
+                                        .clickable { isGlobalSearch = !isGlobalSearch },
+                                    shape = RoundedCornerShape(50),
+                                    color = if (isGlobalSearch) Color(0xFF00B86B).copy(alpha = 0.25f) else Color(0xFF1E1E2E),
+                                    border = BorderStroke(1.dp, if (isGlobalSearch) Color(0xFF00B86B) else Color(0xFF374151))
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Text(
+                                            text = if (isGlobalSearch) "MultiSearch ON ⚡" else "MultiSearch OFF",
+                                            color = if (isGlobalSearch) Color(0xFF00B86B) else Color.Gray,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Switch(
+                                            checked = isGlobalSearch,
+                                            onCheckedChange = { isGlobalSearch = it },
+                                            colors = SwitchDefaults.colors(
+                                                checkedThumbColor = Color.White,
+                                                checkedTrackColor = Color(0xFF00B86B),
+                                                uncheckedThumbColor = Color.Gray,
+                                                uncheckedTrackColor = Color(0xFF1E1E2E)
+                                            ),
+                                            modifier = Modifier.scale(0.7f)
+                                        )
+                                    }
+                                }
+
+                                IconButton(onClick = {
+                                    backupAllChatsAtOnce(context)
+                                    Toast.makeText(context, "All AI Chats Synced ☁️", Toast.LENGTH_SHORT).show()
+                                }) {
+                                    Icon(Icons.Default.CloudUpload, "Backup", tint = activeColor, modifier = Modifier.size(22.dp))
+                                }
+
+                                IconButton(onClick = {
+                                    clearAuthCredentials(context)
+                                    isAuthenticated = false
+                                    Toast.makeText(context, "Logged out", Toast.LENGTH_SHORT).show()
+                                }) {
+                                    Icon(Icons.AutoMirrored.Filled.Logout, "Sign Out", tint = Color(0xFFFF5A5F), modifier = Modifier.size(20.dp))
+                                }
+                            }
+                        }
+
+                        // Unique Color Tab Row for 4 Swipeable AI Pages
+                        TabRow(
+                            selectedTabIndex = pagerState.currentPage,
+                            containerColor = Color(0xFF0F0F1A),
+                            contentColor = activeColor,
+                            indicator = { tabPositions ->
+                                TabRowDefaults.SecondaryIndicator(
+                                    modifier = Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
+                                    color = activeColor,
+                                    height = 3.dp
+                                )
+                            }
+                        ) {
+                            val tabs = listOf("🤖 Gemini", "🤗 Hugging Face", "🚀 Grok", "⚖️ Judge AI")
+                            tabs.forEachIndexed { index, title ->
+                                Tab(
+                                    selected = pagerState.currentPage == index,
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            pagerState.animateScrollToPage(index)
+                                        }
+                                    },
+                                    text = {
+                                        Text(
+                                            text = title,
+                                            fontSize = 11.sp,
+                                            fontWeight = if (pagerState.currentPage == index) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (pagerState.currentPage == index) platformColors[index] else Color.Gray,
+                                            maxLines = 1
+                                        )
+                                    }
+                                )
+                            }
+                        }
                     }
-                ) {
-                    Text("x", fontSize = 24.sp)
                 }
-
-
-                Button(
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF58)), // Red Color
-                    shape = RoundedCornerShape(12.dp),
-                    onClick = {
-                        result = "minus"
-                        focus1.requestFocus()
-
-                        subtract = true
-                    }
-                ) {
-                    Text("-", fontSize = 24.sp)
-                }
-
-
-                Button(
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF58)), // Green Color
-
-                    onClick = {
-
-                        focus1.requestFocus()
-
-                        divide = true
-                    }
-                ) {
-                    Text("/", fontSize = 24.sp)
-                }
-            }
-
-            OutlinedTextField(
-                value = number2,
-                onValueChange = { number2 = it },
-                enabled = enabler,
+            },
+            containerColor = Color(0xFF0F0F1A)
+        ) { innerPadding ->
+            HorizontalPager(
+                state = pagerState,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(focus1),
-                label = { Text("Number 2") }
-            )
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) { page ->
+                when (page) {
+                    0 -> ChatStructure(
+                        nav = Color(0xFF4285F4),
+                        platformName = "Gemini",
+                        searchWord = sharedSearchWord,
+                        onSearchWordChange = { sharedSearchWord = it },
+                        isGlobalSearch = isGlobalSearch,
+                        onGlobalSubmit = { prompt ->
+                            isGlobalLoading = true
+                            coroutineScope.launch {
+                                val t = getCurrentTime()
+                                geminiMessages.add(MessageData(prompt, t, false))
+                                huggingFaceMessages.add(MessageData(prompt, t, false))
+                                grokMessages.add(MessageData(prompt, t, false))
 
-// equal to button
-            Button(
-                onClick = {
+                                val jobG = launch {
+                                    val r = getGeminiResponse(geminiMessages.toList())
+                                    geminiMessages.add(MessageData(r, getCurrentTime(), true))
+                                }
+                                val jobH = launch {
+                                    val r = getHuggingFaceResponse(huggingFaceMessages.toList())
+                                    huggingFaceMessages.add(MessageData(r, getCurrentTime(), true))
+                                }
+                                val jobX = launch {
+                                    val r = getGrokResponse(grokMessages.toList())
+                                    grokMessages.add(MessageData(r, getCurrentTime(), true))
+                                }
 
-                    keyboard?.hide()
-                    focusManager.clearFocus()
+                                jobG.join()
+                                jobH.join()
+                                jobX.join()
+                                isGlobalLoading = false
+                                sharedSearchWord = ""
+                            }
+                        },
+                        externalMessages = geminiMessages,
+                        externalIsLoading = isGlobalLoading
+                    )
 
-                    if (add) {
-                        val num1 = number1.toDoubleOrNull() ?: 0.0
-                        val num2 = number2.toDoubleOrNull() ?: 0.0
-                        result = (num1 + num2).toString()
-                    }
+                    1 -> ChatStructure(
+                        nav = Color(0xFFFFB020),
+                        platformName = "Hugging Face",
+                        searchWord = sharedSearchWord,
+                        onSearchWordChange = { sharedSearchWord = it },
+                        isGlobalSearch = isGlobalSearch,
+                        onGlobalSubmit = { prompt ->
+                            isGlobalLoading = true
+                            coroutineScope.launch {
+                                val t = getCurrentTime()
+                                geminiMessages.add(MessageData(prompt, t, false))
+                                huggingFaceMessages.add(MessageData(prompt, t, false))
+                                grokMessages.add(MessageData(prompt, t, false))
 
-                    if (subtract) {
-                        val num1 = number1.toDoubleOrNull() ?: 0.0
-                        val num2 = number2.toDoubleOrNull() ?: 0.0
-                        result = (num1 - num2).toString()
-                    }
-                    if (multiply) {
-                        val num1 = number1.toDoubleOrNull() ?: 0.0
-                        val num2 = number2.toDoubleOrNull() ?: 0.0
-                        result = (num1 * num2).toString()
-                    }
-                    if (divide) {
-                        val num1 = number1.toDoubleOrNull() ?: 0.0
-                        val num2 = number2.toDoubleOrNull() ?: 0.0
-                        result = (num1 / num2).toString()
-                    }
-                    divide = false
-                    add = false
-                    subtract = false
-                    multiply = false
-                },
-                shape = RoundedCornerShape(12.dp),
+                                val jobG = launch {
+                                    val r = getGeminiResponse(geminiMessages.toList())
+                                    geminiMessages.add(MessageData(r, getCurrentTime(), true))
+                                }
+                                val jobH = launch {
+                                    val r = getHuggingFaceResponse(huggingFaceMessages.toList())
+                                    huggingFaceMessages.add(MessageData(r, getCurrentTime(), true))
+                                }
+                                val jobX = launch {
+                                    val r = getGrokResponse(grokMessages.toList())
+                                    grokMessages.add(MessageData(r, getCurrentTime(), true))
+                                }
 
+                                jobG.join()
+                                jobH.join()
+                                jobX.join()
+                                isGlobalLoading = false
+                                sharedSearchWord = ""
+                            }
+                        },
+                        externalMessages = huggingFaceMessages,
+                        externalIsLoading = isGlobalLoading
+                    )
 
-                modifier = Modifier
-                    .size(50.dp, 50.dp)
+                    2 -> ChatStructure(
+                        nav = Color(0xFF00B86B),
+                        platformName = "Grok",
+                        searchWord = sharedSearchWord,
+                        onSearchWordChange = { sharedSearchWord = it },
+                        isGlobalSearch = isGlobalSearch,
+                        onGlobalSubmit = { prompt ->
+                            isGlobalLoading = true
+                            coroutineScope.launch {
+                                val t = getCurrentTime()
+                                geminiMessages.add(MessageData(prompt, t, false))
+                                huggingFaceMessages.add(MessageData(prompt, t, false))
+                                grokMessages.add(MessageData(prompt, t, false))
 
+                                val jobG = launch {
+                                    val r = getGeminiResponse(geminiMessages.toList())
+                                    geminiMessages.add(MessageData(r, getCurrentTime(), true))
+                                }
+                                val jobH = launch {
+                                    val r = getHuggingFaceResponse(huggingFaceMessages.toList())
+                                    huggingFaceMessages.add(MessageData(r, getCurrentTime(), true))
+                                }
+                                val jobX = launch {
+                                    val r = getGrokResponse(grokMessages.toList())
+                                    grokMessages.add(MessageData(r, getCurrentTime(), true))
+                                }
 
-            ) {
+                                jobG.join()
+                                jobH.join()
+                                jobX.join()
+                                isGlobalLoading = false
+                                sharedSearchWord = ""
+                            }
+                        },
+                        externalMessages = grokMessages,
+                        externalIsLoading = isGlobalLoading
+                    )
 
-                Text("=", fontSize = 25.sp)
+                    3 -> ChatStructure(
+                        nav = Color(0xFF8B5CF6),
+                        platformName = "Judge AI",
+                        searchWord = sharedSearchWord,
+                        onSearchWordChange = { sharedSearchWord = it },
+                        isGlobalSearch = false,
+                        externalMessages = judgeMessages,
+                        externalIsLoading = false
+                    )
+                }
             }
-
-            OutlinedTextField(
-                value = result,
-                onValueChange = { result = it },
-                enabled = false,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Result") }
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-
-
-            ) {
-                Text("TEXT1", color = Color.Blue)
-                Text("TEXT2", color = Color.Red)
-                Text("TEXT3", color = Color.Black)
-            }
-
-            Button(onClick = {
-
-            }
-
-            ) {
-                Text("666")
-
-            }
-
-
         }
-
-//Spacer(modifier = Modifier.height(300.dp))
-    }
-
-
-}
-
-
-
-
-
-
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    MaterialTheme {
-        CalculatorScreen()
     }
 }
-
