@@ -1,187 +1,160 @@
 import SwiftUI
 import Shared
 
-struct ChatMessage: Identifiable {
+struct ProviderReply: Identifiable {
     let id = UUID()
+    let name: String
     let text: String
-    let isFromAI: Bool
 }
 
 struct ContentView: View {
+    @AppStorage("multiai_gemini_key") private var geminiKey = ""
+    @AppStorage("multiai_huggingface_key") private var huggingFaceKey = ""
+    @AppStorage("multiai_openrouter_key") private var openRouterKey = ""
+    @AppStorage("multiai_cerebras_key") private var cerebrasKey = ""
+    @AppStorage("multiai_multisearch") private var multiSearchEnabled = false
     @State private var selectedTab = 0
     @State private var inputPrompt = ""
     @State private var isLoading = false
-    @State private var messages: [ChatMessage] = []
+    @State private var replies: [ProviderReply] = []
+    @State private var showSettings = false
 
-    var activePlatformName: String {
-        switch selectedTab {
-        case 0: return "Gemini"
-        case 1: return "Hugging Face"
-        case 2: return "Grok"
-        default: return "Judge AI"
-        }
-    }
+    private let accent = Color(red: 0.38, green: 0.32, blue: 0.88)
+    private var providerNames: [String] { ["Gemini", "Hugging Face", "OpenRouter", "Cerebras"] }
+    private var activeProvider: String { providerNames[selectedTab] }
 
     var body: some View {
-        ZStack {
-            Color(red: 0.06, green: 0.06, blue: 0.10)
-                .ignoresSafeArea()
-
+        NavigationStack {
             VStack(spacing: 14) {
-                // Header Bar
                 HStack {
-                    Text("MultiAI")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.white)
-
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("MultiAI").font(.system(size: 27, weight: .bold)).foregroundStyle(Color.primary)
+                        Text("One prompt. Multiple perspectives.").font(.caption).foregroundStyle(.secondary)
+                    }
                     Spacer()
-
-                    Text("KMP Shared ⚡")
-                        .font(.system(size: 11, weight: .semibold))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Color(red: 0.06, green: 0.73, blue: 0.51).opacity(0.2))
-                        .foregroundColor(Color(red: 0.06, green: 0.73, blue: 0.51))
-                        .cornerRadius(12)
+                    Button { showSettings = true } label: {
+                        Image(systemName: "slider.horizontal.3").font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(accent).padding(11).background(accent.opacity(0.10)).clipShape(Circle())
+                    }
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
+                .padding(.horizontal, 18).padding(.top, 8)
 
-                // Platform Selector
-                HStack(spacing: 8) {
-                    PlatformPill(name: "GEMINI", color: Color(red: 0.26, green: 0.52, blue: 0.96), isSelected: selectedTab == 0) { selectedTab = 0 }
-                    PlatformPill(name: "HUGGING FACE", color: Color(red: 0.02, green: 0.02, blue: 0.05), isSelected: selectedTab == 1) { selectedTab = 1 }
-                    PlatformPill(name: "GROK", color: Color(red: 0.39, green: 0.40, blue: 0.95), isSelected: selectedTab == 2) { selectedTab = 2 }
-                    PlatformPill(name: "JUDGE AI", color: Color(red: 0.55, green: 0.36, blue: 0.96), isSelected: selectedTab == 3) { selectedTab = 3 }
+                Toggle(isOn: $multiSearchEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("MultiSearch").font(.system(size: 15, weight: .semibold))
+                        Text(multiSearchEnabled ? "Searching all configured providers together" : "Using the selected provider")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 }
-                .padding(.horizontal, 12)
+                .tint(accent).padding(.horizontal, 18)
 
-                // Chat Messages View
-                ScrollViewReader { scrollView in
-                    ScrollView {
-                        VStack(spacing: 12) {
-                            if messages.isEmpty {
-                                VStack(spacing: 12) {
-                                    Text("🤖")
-                                        .font(.system(size: 48))
-                                    Text("Ask \(activePlatformName)")
-                                        .font(.system(size: 18, weight: .bold))
-                                        .foregroundColor(.white)
-                                    Text("Type your prompt below to interact with \(activePlatformName) AI.")
-                                        .font(.system(size: 13))
-                                        .foregroundColor(.gray)
-                                        .multilineTextAlignment(.center)
-                                }
-                                .padding(30)
-                                .background(Color(red: 0.12, green: 0.12, blue: 0.18))
-                                .cornerRadius(20)
-                                .padding(.top, 40)
-                            } else {
-                                ForEach(messages) { msg in
-                                    HStack {
-                                        if !msg.isFromAI { Spacer() }
-                                        Text(msg.text)
-                                            .font(.system(size: 15))
-                                            .padding(14)
-                                            .background(msg.isFromAI ? Color(red: 0.16, green: 0.16, blue: 0.24) : Color(red: 0.39, green: 0.40, blue: 0.95))
-                                            .foregroundColor(.white)
-                                            .cornerRadius(16)
-                                        if msg.isFromAI { Spacer() }
-                                    }
-                                    .padding(.horizontal, 16)
-                                }
-                            }
-
-                            if isLoading {
-                                HStack {
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    Text("\(activePlatformName) is thinking...")
-                                        .font(.system(size: 13))
-                                        .foregroundColor(.gray)
-                                    Spacer()
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 8)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(Array(providerNames.enumerated()), id: \.offset) { index, name in
+                            Button { selectedTab = index } label: {
+                                Text(name).font(.system(size: 12, weight: .semibold))
+                                    .padding(.horizontal, 13).padding(.vertical, 9)
+                                    .background(selectedTab == index ? accent : Color(.secondarySystemBackground))
+                                    .foregroundStyle(selectedTab == index ? .white : .primary)
+                                    .clipShape(Capsule())
                             }
                         }
-                    }
+                    }.padding(.horizontal, 16)
                 }
 
-                // Prompt Input Box
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 12) {
+                        if replies.isEmpty {
+                            ContentUnavailableView("Start a conversation", systemImage: "bubble.left.and.bubble.right",
+                                description: Text("Ask \(multiSearchEnabled ? "all configured providers" : activeProvider) a question."))
+                                .padding(.top, 45)
+                        }
+                        ForEach(replies) { reply in
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(reply.name.uppercased()).font(.caption.weight(.bold)).foregroundStyle(accent)
+                                Text(reply.text).font(.system(size: 15)).foregroundStyle(.primary).textSelection(.enabled)
+                            }
+                            .padding(15).frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color(.secondarySystemBackground)).clipShape(RoundedRectangle(cornerRadius: 17))
+                        }
+                        if isLoading { HStack(spacing: 8) { ProgressView(); Text("Working…").font(.caption).foregroundStyle(.secondary) }.padding(.vertical, 8) }
+                    }.padding(.horizontal, 16).padding(.vertical, 8)
+                }
+
                 HStack(spacing: 10) {
-                    TextField("Ask \(activePlatformName)...", text: $inputPrompt)
-                        .padding(12)
-                        .background(Color(red: 0.14, green: 0.14, blue: 0.20))
-                        .foregroundColor(.white)
-                        .cornerRadius(16)
-
+                    TextField("Message \(multiSearchEnabled ? "MultiAI" : activeProvider)…", text: $inputPrompt, axis: .vertical)
+                        .lineLimit(1...5).padding(12)
+                        .background(Color(.secondarySystemBackground)).clipShape(RoundedRectangle(cornerRadius: 16))
                     Button(action: sendPrompt) {
-                        Image(systemName: "paperplane.fill")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(12)
-                            .background(Color(red: 0.06, green: 0.73, blue: 0.51))
-                            .cornerRadius(16)
-                    }
-                    .disabled(inputPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading)
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 12)
+                        Image(systemName: "arrow.up").font(.system(size: 16, weight: .bold)).foregroundStyle(.white)
+                            .frame(width: 44, height: 44).background(accent).clipShape(Circle())
+                    }.disabled(inputPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading)
+                }.padding(.horizontal, 16).padding(.bottom, 10)
             }
+            .background(Color(.systemBackground))
+            .toolbar(.hidden, for: .navigationBar)
+            .sheet(isPresented: $showSettings) { settingsSheet }
+        }
+        .tint(accent)
+    }
+
+    private var settingsSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Provider API keys") {
+                    SecureField("Gemini API key", text: $geminiKey)
+                    SecureField("Hugging Face token", text: $huggingFaceKey)
+                    SecureField("OpenRouter API key", text: $openRouterKey)
+                    SecureField("Cerebras API key", text: $cerebrasKey)
+                }
+                Section {
+                    Text("Keys are stored locally on this device. Do not share screenshots containing them.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showSettings = false } } }
         }
     }
 
-    func sendPrompt() {
-        let trimmed = inputPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-
-        messages.append(ChatMessage(text: trimmed, isFromAI: false))
+    private func sendPrompt() {
+        let prompt = inputPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !prompt.isEmpty, !isLoading else { return }
         inputPrompt = ""
+        replies = []
         isLoading = true
 
         Task {
-            let aiReply: String
-            switch selectedTab {
-            case 0:
-                aiReply = try await AiService.shared.fetchGeminiAiResponse(prompt: trimmed)
-            case 1:
-                aiReply = try await AiService.shared.fetchHuggingFaceAiResponse(prompt: trimmed)
-            case 2:
-                aiReply = try await AiService.shared.fetchGrokAiResponse(prompt: trimmed)
-            default:
-                aiReply = try await AiService.shared.fetchGeminiAiResponse(prompt: trimmed)
+            var results: [ProviderReply] = []
+            if multiSearchEnabled {
+                async let gemini = AiService.shared.fetchGeminiAiResponse(prompt: prompt, apiKey: geminiKey)
+                async let huggingFace = AiService.shared.fetchHuggingFaceAiResponse(prompt: prompt, apiKey: huggingFaceKey)
+                async let openRouter = AiService.shared.fetchGrokAiResponse(prompt: prompt, apiKey: openRouterKey)
+                async let cerebras = AiService.shared.fetchCerebrasAiResponse(prompt: prompt, apiKey: cerebrasKey)
+                let values = await (gemini, huggingFace, openRouter, cerebras)
+                results = [
+                    ProviderReply(name: "Gemini", text: values.0),
+                    ProviderReply(name: "Hugging Face", text: values.1),
+                    ProviderReply(name: "OpenRouter", text: values.2),
+                    ProviderReply(name: "Cerebras", text: values.3)
+                ]
+            } else {
+                let result: String
+                switch selectedTab {
+                case 0: result = await AiService.shared.fetchGeminiAiResponse(prompt: prompt, apiKey: geminiKey)
+                case 1: result = await AiService.shared.fetchHuggingFaceAiResponse(prompt: prompt, apiKey: huggingFaceKey)
+                case 2: result = await AiService.shared.fetchGrokAiResponse(prompt: prompt, apiKey: openRouterKey)
+                default: result = await AiService.shared.fetchCerebrasAiResponse(prompt: prompt, apiKey: cerebrasKey)
+                }
+                results = [ProviderReply(name: activeProvider, text: result)]
             }
-
-            DispatchQueue.main.async {
-                messages.append(ChatMessage(text: aiReply, isFromAI: true))
+            await MainActor.run {
+                replies = results
                 isLoading = false
             }
         }
     }
 }
 
-struct PlatformPill: View {
-    let name: String
-    let color: Color
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(name)
-                .font(.system(size: 10, weight: .bold))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
-                .background(isSelected ? color : Color.white.opacity(0.1))
-                .foregroundColor(.white)
-                .cornerRadius(14)
-        }
-    }
-}
-
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
-    }
-}
+#Preview { ContentView() }

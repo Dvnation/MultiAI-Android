@@ -6,133 +6,74 @@ import io.ktor.http.*
 import kotlinx.serialization.json.*
 
 object AiService {
-
-    suspend fun fetchGeminiAiResponse(prompt: String): String {
+    private suspend fun openAiCompatible(
+        provider: String,
+        endpoint: String,
+        model: String,
+        apiKey: String,
+        prompt: String
+    ): String {
+        if (apiKey.isBlank()) return "$provider API key is not configured. Add it in Settings."
         return try {
-            val systemPrompt = "You are Gemini, an intelligent, helpful AI assistant. Provide clear, detailed, well-formatted answers."
-            val apiKey = ""
-            val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey"
-
-            val payload = JsonObject(
-                mapOf(
-                    "system_instruction" to JsonObject(
-                        mapOf("parts" to JsonArray(listOf(JsonObject(mapOf("text" to JsonPrimitive(systemPrompt))))))
-                    ),
-                    "contents" to JsonArray(
-                        listOf(JsonObject(mapOf("role" to JsonPrimitive("user"), "parts" to JsonArray(listOf(JsonObject(mapOf("text" to JsonPrimitive(prompt))))))))
-                    ),
-                    "generationConfig" to JsonObject(mapOf("maxOutputTokens" to JsonPrimitive(2048)))
-                )
-            )
-
-            val response: HttpResponse = kmpHttpClient.post(url) {
-                contentType(ContentType.Application.Json)
-                setBody(payload.toString())
-            }
-
-            val bodyText = response.bodyAsText()
-            if (response.status == HttpStatusCode.OK) {
-                val json = Json.parseToJsonElement(bodyText)
-                val rawAnswer = json.jsonObject["candidates"]
-                    ?.jsonArray?.firstOrNull()
-                    ?.jsonObject?.get("content")
-                    ?.jsonObject?.get("parts")
-                    ?.jsonArray?.firstOrNull()
-                    ?.jsonObject?.get("text")
-                    ?.jsonPrimitive?.content ?: ""
-
-                if (rawAnswer.isNotBlank()) cleanAiResponseText(rawAnswer) else "Gemini returned an empty response."
-            } else {
-                "Gemini API Error (${response.status.value})"
-            }
-        } catch (e: Exception) {
-            "Gemini Connection Error: ${e.message ?: "Unable to connect"}"
-        }
-    }
-
-    suspend fun fetchGrokAiResponse(prompt: String): String {
-        return try {
-            val apiKey = ""
-            if (apiKey.isBlank()) return "OpenRouter API key is not configured. Add your key in Settings."
-            val url = "https://openrouter.ai/api/v1/chat/completions"
-
-            val payload = JsonObject(
-                mapOf(
-                    "model" to JsonPrimitive("Qwen/Qwen2.5-72B-Instruct"),
-                    "messages" to JsonArray(
-                        listOf(
-                            JsonObject(mapOf("role" to JsonPrimitive("system"), "content" to JsonPrimitive("You are Grok, an intelligent AI assistant."))),
-                            JsonObject(mapOf("role" to JsonPrimitive("user"), "content" to JsonPrimitive(prompt)))
-                        )
-                    ),
-                    "max_completion_tokens" to JsonPrimitive(2048)
-                )
-            )
-
-            val response: HttpResponse = kmpHttpClient.post(url) {
+            val payload = JsonObject(mapOf(
+                "model" to JsonPrimitive(model),
+                "messages" to JsonArray(listOf(
+                    JsonObject(mapOf("role" to JsonPrimitive("system"), "content" to JsonPrimitive("You are $provider, a helpful AI assistant. Give accurate, clear answers."))),
+                    JsonObject(mapOf("role" to JsonPrimitive("user"), "content" to JsonPrimitive(prompt)))
+                )),
+                "max_tokens" to JsonPrimitive(2048),
+                "temperature" to JsonPrimitive(0.7)
+            ))
+            val response: HttpResponse = kmpHttpClient.post(endpoint) {
                 header(HttpHeaders.Authorization, "Bearer $apiKey")
                 contentType(ContentType.Application.Json)
                 setBody(payload.toString())
             }
-
-            val bodyText = response.bodyAsText()
+            val body = response.bodyAsText()
             if (response.status == HttpStatusCode.OK) {
-                val json = Json.parseToJsonElement(bodyText)
-                val rawAnswer = json.jsonObject["choices"]
-                    ?.jsonArray?.firstOrNull()
-                    ?.jsonObject?.get("message")
-                    ?.jsonObject?.get("content")
-                    ?.jsonPrimitive?.content ?: ""
-
-                if (rawAnswer.isNotBlank()) cleanAiResponseText(rawAnswer) else "Grok returned an empty response."
-            } else {
-                "Grok API Error (${response.status.value})"
-            }
+                val answer = Json.parseToJsonElement(body).jsonObject["choices"]
+                    ?.jsonArray?.firstOrNull()?.jsonObject?.get("message")
+                    ?.jsonObject?.get("content")?.jsonPrimitive?.content.orEmpty()
+                if (answer.isNotBlank()) cleanAiResponseText(answer) else "$provider returned an empty response."
+            } else "$provider API error (${response.status.value}): ${body.take(240)}"
         } catch (e: Exception) {
-            "Grok Connection Error: ${e.message ?: "Unable to connect"}"
+            "$provider connection error: ${e.message ?: "Unable to connect"}"
         }
     }
 
-    suspend fun fetchHuggingFaceAiResponse(prompt: String): String {
+    suspend fun fetchGeminiAiResponse(prompt: String, apiKey: String): String {
+        if (apiKey.isBlank()) return "Gemini API key is not configured. Add it in Settings."
         return try {
-            val apiKey = ""
-            if (apiKey.isBlank()) return "Hugging Face API key is not configured. Add your key in Settings."
-            val url = "https://router.huggingface.co/v1/chat/completions"
-
-            val payload = JsonObject(
-                mapOf(
-                    "model" to JsonPrimitive("qwen/qwen3.8-27b"),
-                    "messages" to JsonArray(
-                        listOf(
-                            JsonObject(mapOf("role" to JsonPrimitive("system"), "content" to JsonPrimitive("You are Hugging Face AI assistant."))),
-                            JsonObject(mapOf("role" to JsonPrimitive("user"), "content" to JsonPrimitive(prompt)))
-                        )
-                    ),
-                    "max_completion_tokens" to JsonPrimitive(2048)
-                )
-            )
-
+            val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey"
+            val payload = JsonObject(mapOf(
+                "contents" to JsonArray(listOf(JsonObject(mapOf(
+                    "role" to JsonPrimitive("user"),
+                    "parts" to JsonArray(listOf(JsonObject(mapOf("text" to JsonPrimitive(prompt)))))
+                )))),
+                "generationConfig" to JsonObject(mapOf("maxOutputTokens" to JsonPrimitive(2048)))
+            ))
             val response: HttpResponse = kmpHttpClient.post(url) {
-                header(HttpHeaders.Authorization, "Bearer $apiKey")
                 contentType(ContentType.Application.Json)
                 setBody(payload.toString())
             }
-
-            val bodyText = response.bodyAsText()
+            val body = response.bodyAsText()
             if (response.status == HttpStatusCode.OK) {
-                val json = Json.parseToJsonElement(bodyText)
-                val rawAnswer = json.jsonObject["choices"]
-                    ?.jsonArray?.firstOrNull()
-                    ?.jsonObject?.get("message")
-                    ?.jsonObject?.get("content")
-                    ?.jsonPrimitive?.content ?: ""
-
-                if (rawAnswer.isNotBlank()) cleanAiResponseText(rawAnswer) else "Hugging Face returned an empty response."
-            } else {
-                "Hugging Face API Error (${response.status.value})"
-            }
+                val answer = Json.parseToJsonElement(body).jsonObject["candidates"]?.jsonArray
+                    ?.firstOrNull()?.jsonObject?.get("content")?.jsonObject?.get("parts")
+                    ?.jsonArray?.firstOrNull()?.jsonObject?.get("text")?.jsonPrimitive?.content.orEmpty()
+                if (answer.isNotBlank()) cleanAiResponseText(answer) else "Gemini returned an empty response."
+            } else "Gemini API error (${response.status.value}): ${body.take(240)}"
         } catch (e: Exception) {
-            "Hugging Face Connection Error: ${e.message ?: "Unable to connect"}"
+            "Gemini connection error: ${e.message ?: "Unable to connect"}"
         }
     }
+
+    suspend fun fetchGrokAiResponse(prompt: String, apiKey: String): String =
+        openAiCompatible("OpenRouter", "https://openrouter.ai/api/v1/chat/completions", "openai/gpt-oss-20b", apiKey, prompt)
+
+    suspend fun fetchHuggingFaceAiResponse(prompt: String, apiKey: String): String =
+        openAiCompatible("Hugging Face", "https://router.huggingface.co/v1/chat/completions", "Qwen/Qwen2.5-72B-Instruct", apiKey, prompt)
+
+    suspend fun fetchCerebrasAiResponse(prompt: String, apiKey: String): String =
+        openAiCompatible("Cerebras", "https://api.cerebras.ai/v1/chat/completions", "llama3.1-8b", apiKey, prompt)
 }
