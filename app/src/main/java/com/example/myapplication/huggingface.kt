@@ -94,11 +94,13 @@ suspend fun getHuggingFaceResponse(history: List<MessageData>): String {
             }
         }
 
-        val groqApiKey = "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"
+        val huggingFaceApiKey = ""
+
+        if (huggingFaceApiKey.isBlank()) return@withContext "Hugging Face API key is not configured. Add your key in Settings."
 
         val payload = JsonObject(
             mapOf(
-                "model" to JsonPrimitive("qwen/qwen3.8-27b"),
+                "model" to JsonPrimitive("Qwen/Qwen2.5-72B-Instruct"),
                 "messages" to JsonArray(apiMessages),
                 "max_completion_tokens" to JsonPrimitive(2048),
                 "temperature" to JsonPrimitive(0.7)
@@ -111,8 +113,8 @@ suspend fun getHuggingFaceResponse(history: List<MessageData>): String {
         for (attempt in 1..maxRetries) {
             try {
                 val request = Request.Builder()
-                    .url("https://api.groq.com/openai/v1/chat/completions")
-                    .header("Authorization", "Bearer $groqApiKey")
+                    .url("https://router.huggingface.co/v1/chat/completions")
+                    .header("Authorization", "Bearer $huggingFaceApiKey")
                     .header("Content-Type", "application/json")
                     .post(requestBody)
                     .build()

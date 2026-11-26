@@ -92,19 +92,20 @@ suspend fun getGrokResponse(history: List<MessageData>): String {
 
     val payload = JsonObject(
         mapOf(
-            "model" to JsonPrimitive("qwen/qwen3.8-27b"),
+            "model" to JsonPrimitive("openai/gpt-oss-20b"),
             "messages" to JsonArray(apiMessages),
             "max_completion_tokens" to JsonPrimitive(2048),
             "temperature" to JsonPrimitive(0.7)
         )
     )
 
-    val secureApiKey = "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"
-    val maxRetries = 6
+    val secureApiKey = ""
+    if (secureApiKey.isBlank()) return "OpenRouter API key is not configured. Add your key in Settings."
+    val maxRetries = 3
 
     for (attempt in 1..maxRetries) {
         try {
-            val response: HttpResponse = chatClient.post("https://api.groq.com/openai/v1/chat/completions") {
+            val response: HttpResponse = chatClient.post("https://openrouter.ai/api/v1/chat/completions") {
                 header(HttpHeaders.Authorization, "Bearer $secureApiKey")
                 contentType(ContentType.Application.Json)
                 accept(ContentType.Application.Json)

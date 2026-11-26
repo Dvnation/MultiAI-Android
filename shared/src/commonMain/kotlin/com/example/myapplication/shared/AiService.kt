@@ -52,12 +52,13 @@ object AiService {
 
     suspend fun fetchGrokAiResponse(prompt: String): String {
         return try {
-            val apiKey = "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"
-            val url = "https://api.groq.com/openai/v1/chat/completions"
+            val apiKey = ""
+            if (apiKey.isBlank()) return "OpenRouter API key is not configured. Add your key in Settings."
+            val url = "https://openrouter.ai/api/v1/chat/completions"
 
             val payload = JsonObject(
                 mapOf(
-                    "model" to JsonPrimitive("qwen/qwen3.8-27b"),
+                    "model" to JsonPrimitive("Qwen/Qwen2.5-72B-Instruct"),
                     "messages" to JsonArray(
                         listOf(
                             JsonObject(mapOf("role" to JsonPrimitive("system"), "content" to JsonPrimitive("You are Grok, an intelligent AI assistant."))),
@@ -94,8 +95,9 @@ object AiService {
 
     suspend fun fetchHuggingFaceAiResponse(prompt: String): String {
         return try {
-            val apiKey = "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"
-            val url = "https://api.groq.com/openai/v1/chat/completions"
+            val apiKey = ""
+            if (apiKey.isBlank()) return "Hugging Face API key is not configured. Add your key in Settings."
+            val url = "https://router.huggingface.co/v1/chat/completions"
 
             val payload = JsonObject(
                 mapOf(
