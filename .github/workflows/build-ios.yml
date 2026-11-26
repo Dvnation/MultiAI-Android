@@ -34,11 +34,8 @@ jobs:
         run: chmod +x gradlew
 
       - name: Verify Android Kotlin Build
-        run: ./gradlew :app:compileDebugKotlin --no-daemon
-
-      - name: Build KMP Shared Framework for iOS Simulator
-        run: |
-          CONFIGURATION=Debug SDK_NAME=iphonesimulator TARGET_BUILD_DIR=shared/build/xcode-frameworks/Debug/iphonesimulator ARCHS=arm64 ./gradlew :shared:embedAndSignAppleFrameworkForXcode --no-daemon
+        run: ./gradlew :app:compileDebugKotlin --no-daemon --no-configuration-cache
+     
 
       - name: Build iOS Simulator App with Xcode
         run: |
