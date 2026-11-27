@@ -3,6 +3,8 @@ name: Build iOS Application (Simulator)
 on:
   push:
     branches: [ main, master, feature/multisearch-provider-routing-v2 ]
+  pull_request:
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
