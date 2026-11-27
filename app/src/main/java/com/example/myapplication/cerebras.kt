@@ -119,7 +119,7 @@ suspend fun getCerebrasResponse(history: List<MessageData>): String {
                     .post(requestBody)
                     .build()
 
-                hfOkHttpClient.newCall(request).execute().use { response ->
+                cerebrasOkHttpClient.newCall(request).execute().use { response ->
                     val responseText = response.body?.string().orEmpty()
 
                     if (response.isSuccessful) {
