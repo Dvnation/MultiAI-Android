@@ -94,7 +94,7 @@ suspend fun getHuggingFaceResponse(history: List<MessageData>): String {
             }
         }
 
-        val huggingFaceApiKey = ""
+        val huggingFaceApiKey = AppKeyStore.get("huggingface")
 
         if (huggingFaceApiKey.isBlank()) return@withContext "Hugging Face API key is not configured. Add your key in Settings."
 

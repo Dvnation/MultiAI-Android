@@ -99,7 +99,7 @@ suspend fun getGrokResponse(history: List<MessageData>): String {
         )
     )
 
-    val secureApiKey = ""
+    val secureApiKey = AppKeyStore.get("openrouter")
     if (secureApiKey.isBlank()) return "OpenRouter API key is not configured. Add your key in Settings."
     val maxRetries = 3
 

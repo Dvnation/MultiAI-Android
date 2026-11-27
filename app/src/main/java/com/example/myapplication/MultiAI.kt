@@ -94,6 +94,7 @@ open class MultiAI : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppKeyStore.initialize(applicationContext)
 
         MobileAds.initialize(this) {}
         loadInterstitial()
@@ -787,6 +788,10 @@ fun AdsSupportPage(onBack: () -> Unit) {
 
 @Composable
 fun SettingsPage(isGlobalSearch: Boolean, onGlobalSearchChange: (Boolean) -> Unit, onBack: () -> Unit) {
+    var geminiKey by remember { mutableStateOf(AppKeyStore.get("gemini")) }
+    var huggingFaceKey by remember { mutableStateOf(AppKeyStore.get("huggingface")) }
+    var openRouterKey by remember { mutableStateOf(AppKeyStore.get("openrouter")) }
+    var cerebrasKey by remember { mutableStateOf(AppKeyStore.get("cerebras")) }
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color(0xFF0F0F1A)
@@ -817,6 +822,16 @@ fun SettingsPage(isGlobalSearch: Boolean, onGlobalSearchChange: (Boolean) -> Uni
                     color = Color.White
                 )
             }
+
+            Spacer(Modifier.height(16.dp))
+            Text("Provider API keys", color = Color.White, fontWeight = FontWeight.Bold)
+            Text("Keys are saved locally on this device.", color = Color.Gray, fontSize = 12.sp)
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(value = geminiKey, onValueChange = { geminiKey = it; AppKeyStore.set("gemini", it) }, label = { Text("Gemini API key") }, singleLine = true, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = huggingFaceKey, onValueChange = { huggingFaceKey = it; AppKeyStore.set("huggingface", it) }, label = { Text("Hugging Face token") }, singleLine = true, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = openRouterKey, onValueChange = { openRouterKey = it; AppKeyStore.set("openrouter", it) }, label = { Text("OpenRouter API key") }, singleLine = true, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = cerebrasKey, onValueChange = { cerebrasKey = it; AppKeyStore.set("cerebras", it) }, label = { Text("Cerebras API key") }, singleLine = true, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(12.dp))
 
             Spacer(Modifier.height(16.dp))
 
