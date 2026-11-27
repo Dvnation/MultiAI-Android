@@ -644,6 +644,16 @@ fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) 
                                 isGrokLoading = false
                             }
                         }
+                        coroutineScope.launch {
+                            try {
+                                val resp = getCerebrasResponse(cerebrasMessages.toList())
+                                cerebrasMessages.add(MessageData(resp, getCurrentTime(), true))
+                            } catch (e: Exception) {
+                                cerebrasMessages.add(MessageData("ERROR: ${e.localizedMessage}", getCurrentTime(), true))
+                            } finally {
+                                isCerebrasLoading = false
+                            }
+                        }
                     }
                 }
 
