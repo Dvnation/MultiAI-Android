@@ -94,6 +94,7 @@ open class MultiAI : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppKeyStore.initialize(applicationContext)
 
         MobileAds.initialize(this) {}
         loadInterstitial()
@@ -289,7 +290,7 @@ fun AppSplashScreen(onTimeout: () -> Unit) {
 @Composable
 fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) {
     val navController = rememberNavController()
-    val pagerState = rememberPagerState(pageCount = { 4 })
+    val pagerState = rememberPagerState(pageCount = { 5 })
     val coroutineScope = rememberCoroutineScope()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val context = LocalContext.current
@@ -300,7 +301,7 @@ fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) 
 
     var isGlobalSearch by remember { mutableStateOf(false) }
     var globalSearchWord by remember { mutableStateOf("") }
-    val individualSearchWords = remember { mutableStateListOf("", "", "", "") }
+    val individualSearchWords = remember { mutableStateListOf("", "", "", "", "") }
     var checker2 by remember { mutableStateOf("") }
     var restoreTrigger by remember { mutableIntStateOf(0) }
 
@@ -578,6 +579,7 @@ fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) 
                 var isGeminiLoading by remember { mutableStateOf(false) }
                 var isHfLoading by remember { mutableStateOf(false) }
                 var isGrokLoading by remember { mutableStateOf(false) }
+                var isCerebrasLoading by remember { mutableStateOf(false) }
 
                 val geminiMessages = remember {
                     mutableStateListOf<MessageData>().apply { addAll(getActiveChat(context, "Gemini")) }
@@ -588,6 +590,7 @@ fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) 
                 val grokMessages = remember {
                     mutableStateListOf<MessageData>().apply { addAll(getActiveChat(context, "Grok")) }
                 }
+                val cerebrasMessages = remember { mutableStateListOf<MessageData>().apply { addAll(getActiveChat(context, "Cerebras")) } }
                 val judgeMessages = remember {
                     mutableStateListOf<MessageData>().apply { addAll(getActiveChat(context, "Judge AI")) }
                 }
@@ -600,16 +603,19 @@ fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) 
                         geminiMessages.add(userMsg)
                         hfMessages.add(userMsg)
                         grokMessages.add(userMsg)
+                        cerebrasMessages.add(userMsg)
 
                         globalSearchWord = ""
                         checker2 = ""
                         individualSearchWords[0] = ""
                         individualSearchWords[1] = ""
                         individualSearchWords[2] = ""
+                        individualSearchWords[3] = ""
 
                         isGeminiLoading = true
                         isHfLoading = true
                         isGrokLoading = true
+                        isCerebrasLoading = true
 
                         coroutineScope.launch {
                             try {
@@ -643,6 +649,16 @@ fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) 
                                 isGrokLoading = false
                             }
                         }
+                        coroutineScope.launch {
+                            try {
+                                val resp = getCerebrasResponse(cerebrasMessages.toList())
+                                cerebrasMessages.add(MessageData(resp, getCurrentTime(), true))
+                            } catch (e: Exception) {
+                                cerebrasMessages.add(MessageData("ERROR: ${e.localizedMessage}", getCurrentTime(), true))
+                            } finally {
+                                isCerebrasLoading = false
+                            }
+                        }
                     }
                 }
 
@@ -651,14 +667,16 @@ fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) 
                 val pageNames = listOf(
                     "✨ GEMINI",
                     "🤗 HUGGING FACE",
-                    "🚀 GROK",
+                    "🚀 OPENROUTER",
+                    "🧠 CEREBRAS",
                     "⚖️ JUDGE AI"
                 )
 
                 val platformColors = listOf(
                     Color(0xFF4285F4), // Gemini
                     Color(0xFFFF6D00), // Hugging Face
-                    Color(0xFF00B86B), // Grok
+                    Color(0xFF00B86B), // OpenRouter
+                    Color(0xFF6D5DFB), // Cerebras
                     Color(0xFF8B5CF6)  // Judge AI
                 )
 
@@ -697,15 +715,15 @@ fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) 
                             modifier = Modifier.fillMaxSize().weight(1f),
                             beyondViewportPageCount = 3
                         ) { pageIndex ->
-                            val currentSearchWord = if (pageIndex == 3) {
-                                individualSearchWords[3]
+                            val currentSearchWord = if (pageIndex == 4) {
+                                individualSearchWords[4]
                             } else {
                         if (isGlobalSearch) globalSearchWord else individualSearchWords[pageIndex]
                     }
 
                     val onSearchChange: (String) -> Unit = { newValue ->
-                        if (pageIndex == 3) {
-                            individualSearchWords[3] = newValue
+                        if (pageIndex == 4) {
+                            individualSearchWords[4] = newValue
                         } else {
                             if (isGlobalSearch) {
                                 globalSearchWord = newValue
@@ -713,6 +731,7 @@ fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) 
                                 individualSearchWords[0] = newValue
                                 individualSearchWords[1] = newValue
                                 individualSearchWords[2] = newValue
+                                individualSearchWords[3] = newValue
                             } else {
                                 individualSearchWords[pageIndex] = newValue
                             }
@@ -723,7 +742,8 @@ fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) 
                         0 -> GeminiNav(navController, currentSearchWord, onSearchChange, checker2, isGlobalSearch, onGlobalSubmit, geminiMessages, isGeminiLoading)
                         1 -> HuggingFaceNav(navController, currentSearchWord, onSearchChange, isGlobalSearch, onGlobalSubmit, hfMessages, isHfLoading)
                         2 -> GrokNav(navController, currentSearchWord, onSearchChange, isGlobalSearch, onGlobalSubmit, grokMessages, isGrokLoading)
-                        3 -> JudgeAiNav(
+                        3 -> CerebrasNav(navController, currentSearchWord, onSearchChange, isGlobalSearch, onGlobalSubmit, cerebrasMessages, isCerebrasLoading)
+                        4 -> JudgeAiNav(
                             navController,
                             currentSearchWord,
                             onSearchChange,
@@ -734,7 +754,8 @@ fun SwipeableApp(onSignOut: () -> Unit = {}, onViewOnboarding: () -> Unit = {}) 
                             sourceMessages = mapOf(
                                 "Gemini" to geminiMessages.toList(),
                                 "Hugging Face" to hfMessages.toList(),
-                                "Grok" to grokMessages.toList()
+                                "Grok" to grokMessages.toList(),
+                                "Cerebras" to cerebrasMessages.toList()
                             )
                         )
                     }
@@ -787,6 +808,10 @@ fun AdsSupportPage(onBack: () -> Unit) {
 
 @Composable
 fun SettingsPage(isGlobalSearch: Boolean, onGlobalSearchChange: (Boolean) -> Unit, onBack: () -> Unit) {
+    var geminiKey by remember { mutableStateOf(AppKeyStore.get("gemini")) }
+    var huggingFaceKey by remember { mutableStateOf(AppKeyStore.get("huggingface")) }
+    var openRouterKey by remember { mutableStateOf(AppKeyStore.get("openrouter")) }
+    var cerebrasKey by remember { mutableStateOf(AppKeyStore.get("cerebras")) }
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color(0xFF0F0F1A)
@@ -817,6 +842,16 @@ fun SettingsPage(isGlobalSearch: Boolean, onGlobalSearchChange: (Boolean) -> Uni
                     color = Color.White
                 )
             }
+
+            Spacer(Modifier.height(16.dp))
+            Text("Provider API keys", color = Color.White, fontWeight = FontWeight.Bold)
+            Text("Keys are saved locally on this device.", color = Color.Gray, fontSize = 12.sp)
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(value = geminiKey, onValueChange = { geminiKey = it; AppKeyStore.set("gemini", it) }, label = { Text("Gemini API key") }, singleLine = true, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = huggingFaceKey, onValueChange = { huggingFaceKey = it; AppKeyStore.set("huggingface", it) }, label = { Text("Hugging Face token") }, singleLine = true, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = openRouterKey, onValueChange = { openRouterKey = it; AppKeyStore.set("openrouter", it) }, label = { Text("OpenRouter API key") }, singleLine = true, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = cerebrasKey, onValueChange = { cerebrasKey = it; AppKeyStore.set("cerebras", it) }, label = { Text("Cerebras API key") }, singleLine = true, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(12.dp))
 
             Spacer(Modifier.height(16.dp))
 

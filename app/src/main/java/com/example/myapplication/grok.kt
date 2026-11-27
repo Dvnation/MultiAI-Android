@@ -92,19 +92,20 @@ suspend fun getGrokResponse(history: List<MessageData>): String {
 
     val payload = JsonObject(
         mapOf(
-            "model" to JsonPrimitive("qwen/qwen3.8-27b"),
+            "model" to JsonPrimitive("openai/gpt-oss-20b"),
             "messages" to JsonArray(apiMessages),
             "max_completion_tokens" to JsonPrimitive(2048),
             "temperature" to JsonPrimitive(0.7)
         )
     )
 
-    val secureApiKey = "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"
-    val maxRetries = 6
+    val secureApiKey = AppKeyStore.get("openrouter")
+    if (secureApiKey.isBlank()) return "OpenRouter API key is not configured. Add your key in Settings."
+    val maxRetries = 3
 
     for (attempt in 1..maxRetries) {
         try {
-            val response: HttpResponse = chatClient.post("https://api.groq.com/openai/v1/chat/completions") {
+            val response: HttpResponse = chatClient.post("https://openrouter.ai/api/v1/chat/completions") {
                 header(HttpHeaders.Authorization, "Bearer $secureApiKey")
                 contentType(ContentType.Application.Json)
                 accept(ContentType.Application.Json)
@@ -275,6 +276,132 @@ fun GrokNav(
                         ) {
                             Text(
                                 text = "Search with Grok 🚀",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = Color.White
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        TextButton(onClick = { navController.popBackStack() }) {
+                            Text("Back to Dashboard", color = Color(0xFF6B7280), fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CerebrasNav(
+    navController: NavController,
+    searchWord: String = "",
+    onSearchWordChange: (String) -> Unit = {},
+    isGlobalSearch: Boolean = false,
+    onGlobalSubmit: (String) -> Unit = {},
+    externalMessages: SnapshotStateList<MessageData>? = null,
+    externalIsLoading: Boolean = false
+) {
+    val context = LocalContext.current
+    val haptics = LocalHapticFeedback.current
+    var isPressed by remember {
+        mutableStateOf(getActiveChat(context, "Cerebras").isNotEmpty())
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Color(0xFFF5F7F9)
+    ) {
+        if (isPressed) {
+            ChatStructure(
+                nav = Color(0xFF6D5DFB),
+                platformName = "Cerebras",
+                searchWord = searchWord,
+                onSearchWordChange = onSearchWordChange,
+                isGlobalSearch = isGlobalSearch,
+                onGlobalSubmit = onGlobalSubmit,
+                externalMessages = externalMessages,
+                externalIsLoading = externalIsLoading
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(26.dp),
+                    color = Color.White,
+                    shadowElevation = 3.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(62.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFEDEBFF)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("⚡", fontSize = 30.sp)
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = Color(0xFFEDEBFF)
+                        ) {
+                            Text(
+                                text = "CEREBRAS ENGINE",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFF6D5DFB),
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Text(
+                            text = "CEREBRAS AI SEARCH",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFF111827),
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Text(
+                            text = "Fast, sharp responses with automatic fallback protection.",
+                            fontSize = 13.sp,
+                            color = Color(0xFF6B7280),
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        Button(
+                            onClick = {
+                                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                isPressed = true
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6D5DFB))
+                        ) {
+                            Text(
+                                text = "Search with Cerebras 🚀",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 15.sp,
                                 color = Color.White
