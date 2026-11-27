@@ -126,7 +126,7 @@ suspend fun getGeminiResponse(history: List<MessageData>): String {
         // Replace this placeholder with a NEW key only if testing
         // direct API access. Never reuse the key you exposed.
         // For production, keep the key in your backend instead.
-        val geminiApiKey = ""
+        val geminiApiKey = AppKeyStore.get("gemini")
 
         if (geminiApiKey == "PASTE_YOUR_NEW_API_KEY_HERE" ||
             geminiApiKey.isBlank()
