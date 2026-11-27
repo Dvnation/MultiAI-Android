@@ -294,6 +294,7 @@ fun GrokNav(
     }
 }
 
+@Composable
 fun CerebrasNav(
     navController: NavController,
     searchWord: String = "",
@@ -419,10 +420,6 @@ fun CerebrasNav(
     }
 }
 
-fun CerebrasNav(
-    navController: NavController,
-    searchWord: String = "",
-    onSearchWordChange: (String) -> Unit = {},
     isGlobalSearch: Boolean = false,
     onGlobalSubmit: (String) -> Unit = {},
     externalMessages: SnapshotStateList<MessageData>? = null,
@@ -544,10 +541,6 @@ fun CerebrasNav(
     }
 }
 
-fun CerebrasNav(
-    navController: NavController,
-    searchWord: String = "",
-    onSearchWordChange: (String) -> Unit = {},
     isGlobalSearch: Boolean = false,
     onGlobalSubmit: (String) -> Unit = {},
     externalMessages: SnapshotStateList<MessageData>? = null,
