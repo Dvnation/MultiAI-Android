@@ -100,7 +100,7 @@ suspend fun getHuggingFaceResponse(history: List<MessageData>): String {
 
         val payload = JsonObject(
             mapOf(
-                "model" to JsonPrimitive("Qwen/Qwen2.5-72B-Instruct"),
+                "model" to JsonPrimitive("Qwen/Qwen3-4B-Thinking-2507"),
                 "messages" to JsonArray(apiMessages),
                 "max_completion_tokens" to JsonPrimitive(2048),
                 "temperature" to JsonPrimitive(0.7)

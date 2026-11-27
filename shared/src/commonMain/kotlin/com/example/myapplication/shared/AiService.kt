@@ -72,7 +72,7 @@ object AiService {
         openAiCompatible("OpenRouter", "https://openrouter.ai/api/v1/chat/completions", "openai/gpt-oss-20b", apiKey, prompt)
 
     suspend fun fetchHuggingFaceAiResponse(prompt: String, apiKey: String): String =
-        openAiCompatible("Hugging Face", "https://router.huggingface.co/v1/chat/completions", "Qwen/Qwen2.5-72B-Instruct", apiKey, prompt)
+        openAiCompatible("Hugging Face", "https://router.huggingface.co/v1/chat/completions", "Qwen/Qwen3-4B-Thinking-2507", apiKey, prompt)
 
     suspend fun fetchCerebrasAiResponse(prompt: String, apiKey: String): String =
         openAiCompatible("Cerebras", "https://api.cerebras.ai/v1/chat/completions", "llama3.1-8b", apiKey, prompt)
